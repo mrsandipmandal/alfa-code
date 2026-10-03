@@ -1,3 +1,23 @@
+---
+license: apache-2.0
+language:
+- en
+pipeline_tag: text-generation
+library_name: transformers
+tags:
+- code
+- code-generation
+- multimodal
+- gguf
+- llama
+datasets:
+- HuggingFaceH4/CodeAlpaca_20K
+metrics:
+- code_eval
+- perplexity
+version: 0.1.0-tiny-50M
+---
+
 # Alfa Code - Multimodal Coding GGUF
 
 RTX 3050 4GB: use tiny-50M demo. 1B+ needs cloud 8xH100.
