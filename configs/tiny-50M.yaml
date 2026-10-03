@@ -1,0 +1,28 @@
+# Tiny demo config - fits RTX 3050 4GB. Scale to 1B+ only on cloud 8xH100.
+model:
+  arch: llama
+  hidden_size: 512
+  num_layers: 8
+  num_heads: 8
+  num_kv_heads: 4
+  intermediate_size: 1376
+  vocab_size: 32000
+  max_seq_len: 2048
+  rope_theta: 10000
+tokenizer:
+  type: bpe
+  vocab_size: 32000
+  train_files: data/processed/train.jsonl
+multimodal:
+  vision_encoder: openai/clip-vit-base-patch32
+  projector_hidden: 512
+  video_frames: 4
+training:
+  batch_size: 2
+  grad_accum: 8
+  lr: 3e-4
+  epochs: 1
+  output_dir: outputs/tiny-50M
+gguf:
+  quant: Q4_K_M
+  out_file: outputs/tiny-50M.gguf

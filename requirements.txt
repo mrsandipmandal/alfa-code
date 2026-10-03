@@ -1,0 +1,9 @@
+huggingface_hub>=1.0
+datasets>=3.0
+transformers>=4.40
+hf_transfer>=0.1
+pyyaml>=6.0
+tqdm>=4.66
+gradio>=5.0
+tokenizers>=0.20
+torch --index-url https://download.pytorch.org/whl/cu121
