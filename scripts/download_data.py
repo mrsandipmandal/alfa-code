@@ -144,9 +144,13 @@ def normalize_video_row(caption: str, video_ref: str, source: str,
 
 
 def _load_rows(ds_id, subset, max_rows, streaming, seed=42):
+    # codeparrot datasets still use a loading script -> needs explicit trust
+    trust = ds_id.startswith("codeparrot/")
+    if trust:
+        print(f"note: trusting remote code for {ds_id} (loading script)")
     print(f"Loading {ds_id} (subset={subset}, streaming={streaming}) ...")
     ds = load_dataset(ds_id, subset, split="train", streaming=streaming,
-                      trust_remote_code=False)
+                      trust_remote_code=trust)
     if streaming:
         it = iter(ds)
         rows = []
