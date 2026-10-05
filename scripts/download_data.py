@@ -10,13 +10,13 @@ Unified row schema (jsonl):
   - video: str | null (url / path)
   - context_len: estimated chars of prompt+answer (for long-context filtering)
 
-Datasets (all public, Colab T4 friendly):
+Datasets (all public, Colab T4 friendly; each has fallbacks in SOURCES):
   code_small_test : HuggingFaceH4/CodeAlpaca_20K   (prompt/completion)
-  code_long       : bigcode/the-stack-smol         (long files, high context)
-  code_instruct   : bigcode/self-oss-instruct
+  code_long       : codeparrot/github-code-clean [Python-all] (long files, high context)
+  code_instruct   : bigcode/self-oss-instruct (-> CodeAlpaca fallback)
   reasoning       : Open-Orca/OpenOrca
   image_to_code   : HuggingFaceM4/websight         (screenshot -> html)
-  video_to_code   : microsoft/MSR-VTT              (clip -> caption/code task)
+  video_to_code   : AlexZigma/msr-vtt (-> friedrichor/MSR-VTT train_7k fallback)
   multimodal_mix  : code_long + image_to_code + video_to_code sampled together
 
 High context: default keeps up to ~24k chars prompt + 24k answer
@@ -39,17 +39,44 @@ from datasets import load_dataset
 MAP = {
     # coding — short instruct (public, no login needed)
     "code_small_test": ("HuggingFaceH4/CodeAlpaca_20K", None, None),
-    # coding — long files, high context (public smol subset, streams well)
-    "code_long": ("bigcode/the-stack-smol", "data", None),
+    # coding — long files, high context (public, streams well)
+    "code_long": ("codeparrot/github-code-clean", "Python-all", None),
     # coding — instruct mix
     "code_instruct": ("bigcode/self-oss-instruct", None, None),
     "reasoning": ("Open-Orca/OpenOrca", None, None),
     # image -> code (screenshot + html)
     "image_to_code": ("HuggingFaceM4/websight", None, None),
     # video -> code/caption (clip metadata + captions)
-    "video_to_code": ("microsoft/MSR-VTT", None, None),
+    "video_to_code": ("AlexZigma/msr-vtt", None, None),
     # combo sampler (handled specially, not a single HF id)
     "multimodal_mix": (None, None, None),
+}
+
+# Fallback sources tried in order when the primary MAP entry is
+# gated / renamed / unreachable (e.g. bigcode/the-stack-smol is gated,
+# microsoft/MSR-VTT does not exist). First success wins.
+SOURCES = {
+    "code_long": [
+        ("codeparrot/github-code-clean", "Python-all", None),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, None),
+    ],
+    "code_small_test": [
+        ("HuggingFaceH4/CodeAlpaca_20K", None, None),
+    ],
+    "code_instruct": [
+        ("bigcode/self-oss-instruct", None, None),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, None),
+    ],
+    "reasoning": [
+        ("Open-Orca/OpenOrca", None, None),
+    ],
+    "image_to_code": [
+        ("HuggingFaceM4/websight", None, None),
+    ],
+    "video_to_code": [
+        ("AlexZigma/msr-vtt", None, None),
+        ("friedrichor/MSR-VTT", "train_7k", None),
+    ],
 }
 
 DEFAULT_OUT = Path("data/processed/train.jsonl")
@@ -134,9 +161,23 @@ def _load_rows(ds_id, subset, max_rows, streaming, seed=42):
     return list(ds.select(range(k)))
 
 
+def _load_rows_first(name, max_rows, streaming, seed=42):
+    """Try each candidate source in SOURCES[name]; first success wins."""
+    last_err = None
+    for ds_id, subset, _ in SOURCES.get(name, [MAP[name]]):
+        try:
+            rows = _load_rows(ds_id, subset, max_rows, streaming, seed)
+            print(f"using source {ds_id} (subset={subset}) -> {len(rows)} raw rows")
+            return rows, ds_id
+        except Exception as e:
+            print(f"[warn] {name} source {ds_id} failed ({type(e).__name__}: {e}), trying next")
+            last_err = e
+    raise RuntimeError(f"all sources failed for {name}: {last_err}")
+
+
 def _code_text_row(r: dict):
-    """Best-effort long code extraction from the-stack-smol style rows."""
-    for k in ("content", "text", "code", "completion", "output"):
+    """Best-effort long code extraction (the-stack / codeparrot style rows)."""
+    for k in ("content", "text", "code", "completion", "output", "solution"):
         v = r.get(k)
         if isinstance(v, str) and v.strip():
             lang = r.get("language") or r.get("lang") or ""
@@ -170,9 +211,16 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
 
     ds_id, subset, _ = MAP[name]
     auto_stream = streaming or name in ("code_long", "image_to_code", "video_to_code")
-    raw = _load_rows(ds_id, subset, max_rows, auto_stream, seed)
+    raw, used_id = _load_rows_first(name, max_rows, auto_stream, seed)
+    ds_id = used_id  # record the source that actually worked
 
-    for r in raw:
+    def _caption(r: dict) -> str:
+        c = (r.get("caption") or r.get("text") or r.get("sentence") or "")
+        if isinstance(c, list):  # e.g. friedrichor/MSR-VTT captions list
+            c = c[0] if c else ""
+        return str(c)
+
+    for i, r in enumerate(raw):
         try:
             if name == "code_small_test":
                 rows_out.append(normalize_code_row(
@@ -197,17 +245,22 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
                 instr = (r.get("instruction") or r.get("prompt")
                          or "Build this UI as a single HTML file:")
                 img_ref = str(r.get("image_url") or r.get("url") or r.get("id") or "")
+                if not img_ref:
+                    # PIL image has no URL — keep an index ref so images[] is non-empty
+                    img_ref = f"{ds_id}#{i}"
                 # don't embed PIL bytes in jsonl — keep reference only
                 rows_out.append(normalize_image_row(
                     instr, str(html), img_ref, ds_id,
                     max_prompt, max_answer, image_tokens))
             elif name == "video_to_code":
                 # MSR-VTT style: {caption, video_id/url/clip}
-                caption = (r.get("caption") or r.get("text") or r.get("sentence") or "")
+                caption = _caption(r)
                 vref = str(r.get("video_url") or r.get("url")
                             or r.get("video_id") or r.get("clip_id") or r.get("id") or "")
+                if not vref:
+                    vref = f"{ds_id}#{i}"
                 rows_out.append(normalize_video_row(
-                    str(caption), vref, ds_id, max_prompt, max_answer,
+                    caption, vref, ds_id, max_prompt, max_answer,
                     video_frames, video_tokens_per_frame))
             else:
                 rows_out.append(normalize_code_row(str(r), "", ds_id, max_prompt, max_answer))

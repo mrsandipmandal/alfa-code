@@ -51,3 +51,8 @@ Corrected English:
   Implemented: `alfa.ipynb` + `notebooks/colab_t4.ipynb` — private HF `snapshot_download` বাদ, public GitHub clone;
   login/upload cell-এ token-missing guard; default `multimodal_mix` 1500 rows; train `--config` + `--max-seq-len 2048 --batch-size 2` (T4 safe)।
   Note: ভুল নামে secret (`hf_HuqTdz...` = token-as-name) তৈরি হয়েছিল — মুছে দেওয়া হয়েছে; token revoke + rotate করতে বলা হয়েছে।
+- [2026-10-05] Dataset source fix (Colab warnings) — approved ("after 17 min same here why?")।
+  Implemented: `bigcode/the-stack-smol` (gated) → `codeparrot/github-code-clean/Python-all`;
+  `microsoft/MSR-VTT` (missing) → `AlexZigma/msr-vtt` → `friedrichor/MSR-VTT/train_7k` fallback;
+  SOURCES fallback chain (`_load_rows_first`), caption-list + image/video index-ref handling।
+  Note: Cell 5 train 17min+ normal (500 rows × 2048 ctx, grad-ckpt); GPU meter lag হতে পারে — 40min+ আটকে থাকলে rows কমাতে হবে।
