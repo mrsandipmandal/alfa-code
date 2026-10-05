@@ -47,3 +47,7 @@ Corrected English:
   Implemented: repo `default_workflow_permissions` read→write; `main` unprotected (GITHUB_TOKEN push OK, PAT লাগে না);
   `.github/workflows/train-sync.yml` (dispatch+weekly, CPU-safe defaults 300 rows/2048 ctx, `[skip ci]` push, Hub upload, tag+release);
   বড় binary (`*.bin`, `data/processed/`) git-এ নয় — Hub + Release asset হিসেবে। `HF_TOKEN` secret এখনো বাকি।
+- [2026-10-05] Colab notebook fix (401 Unauthorized) — approved ("next for training in colab")।
+  Implemented: `alfa.ipynb` + `notebooks/colab_t4.ipynb` — private HF `snapshot_download` বাদ, public GitHub clone;
+  login/upload cell-এ token-missing guard; default `multimodal_mix` 1500 rows; train `--config` + `--max-seq-len 2048 --batch-size 2` (T4 safe)।
+  Note: ভুল নামে secret (`hf_HuqTdz...` = token-as-name) তৈরি হয়েছিল — মুছে দেওয়া হয়েছে; token revoke + rotate করতে বলা হয়েছে।
