@@ -6,4 +6,5 @@ pyyaml>=6.0
 tqdm>=4.66
 gradio>=5.0
 tokenizers>=0.20
+accelerate>=0.30
 torch --index-url https://download.pytorch.org/whl/cu121

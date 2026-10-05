@@ -9,7 +9,14 @@ OUT = Path("tokenizers/alfa-32k.json")
 def texts():
     for line in open(DATA, encoding="utf-8"):
         o = json.loads(line)
-        yield o.get("prompt", "") + "\n" + o.get("answer", "")
+        # include think + multimodal placeholders so BPE sees long-context
+        # code/image/video distributions; no clipping here (BPE handles it)
+        pre = ""
+        if o.get("images"):
+            pre += "<image>\n"
+        if o.get("video"):
+            pre += "<video> " * 4 + "\n"
+        yield pre + o.get("prompt", "") + "\n" + o.get("think", "") + "\n" + o.get("answer", "")
 
 def main(vocab_size=32000):
     assert DATA.exists(), f"missing {DATA}, run download_data.py first"

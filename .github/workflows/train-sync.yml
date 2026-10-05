@@ -1,0 +1,136 @@
+name: Train + Sync
+
+# Manual + weekly schedule. No `push` trigger on purpose:
+# CI pushes back to main with [skip ci], and GITHUB_TOKEN pushes
+# don't re-trigger workflows anyway.
+on:
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: "Dataset key from scripts/download_data.py MAP"
+        default: "multimodal_mix"
+        type: choice
+        options:
+          - multimodal_mix
+          - code_long
+          - code_small_test
+          - code_instruct
+          - image_to_code
+          - video_to_code
+      max_rows:
+        description: "Rows to sample (keep small on CPU runners)"
+        default: "300"
+      epochs:
+        description: "Training epochs"
+        default: "1"
+      max_seq_len:
+        description: "Context length (2048 fits CPU runner; 8192 needs GPU)"
+        default: "2048"
+      upload_hub:
+        description: "Upload outputs to HuggingFace Hub (needs HF_TOKEN secret)"
+        default: true
+        type: boolean
+      create_release:
+        description: "Create tag + GitHub Release with model assets"
+        default: true
+        type: boolean
+  schedule:
+    - cron: "0 2 * * 0"  # weekly Sunday 02:00 UTC
+
+concurrency:
+  group: train-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write  # push ci-summary + create tags/releases
+
+jobs:
+  train-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      HF_HUB_OFFLINE: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Build dataset
+        run: |
+          python scripts/download_data.py \
+            --dataset "${{ inputs.dataset || 'multimodal_mix' }}" \
+            --max-rows "${{ inputs.max_rows || '300' }}" \
+            --overwrite
+          python scripts/train_tokenizer.py
+
+      - name: Train
+        run: |
+          python scripts/train_hf.py \
+            --data data/processed/train.jsonl \
+            --out outputs/tiny-50M \
+            --epochs "${{ inputs.epochs || '1' }}" \
+            --config configs/tiny-50M.yaml \
+            --max-seq-len "${{ inputs.max_seq_len || '2048' }}" \
+            --batch-size 2
+
+      - name: Write CI summary
+        if: always()
+        run: |
+          mkdir -p outputs
+          {
+            echo "# CI training summary"
+            echo ""
+            echo "- date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- dataset: ${{ inputs.dataset || 'multimodal_mix' }} (rows: ${{ inputs.max_rows || '300' }})"
+            echo "- epochs: ${{ inputs.epochs || '1' }}, max_seq_len: ${{ inputs.max_seq_len || '2048' }}"
+            echo "- train rows: $(wc -l < data/processed/train.jsonl)"
+            echo "- tokenizer: $(ls -la tokenizers/ | tail -n +2)"
+            echo "- outputs: $(ls -la outputs/tiny-50M 2>/dev/null || echo MISSING)"
+          } > outputs/ci-summary.md
+          cat outputs/ci-summary.md
+
+      - name: Upload to HuggingFace Hub
+        if: inputs.upload_hub != false && secrets.HF_TOKEN != ''
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          from huggingface_hub import HfApi
+          import os
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          api.upload_folder(folder_path='outputs/tiny-50M',
+                            repo_id='mrsandip/Alfa-Code',
+                            path_in_repo='outputs/tiny-50M')
+          print('uploaded to Hub')
+          "
+
+      - name: Push small artifacts to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # NOTE: data/processed/ and *.bin are gitignored on purpose —
+          # large binaries go to Hub + Release, never into git history.
+          git add -f tokenizers/alfa-32k.json outputs/ci-summary.md 2>/dev/null || true
+          git diff --cached --quiet && echo "nothing to commit" && exit 0
+          git commit -m "[skip ci] CI: training outputs $(date -u +%Y-%m-%d)"
+          git push origin HEAD:main
+
+      - name: Tag + Release
+        if: inputs.create_release != false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="tiny-50M-$(date -u +%Y%m%d-%H%M)"
+          git tag "$TAG"
+          git push origin "$TAG"
+          ASSETS=""
+          [ -f outputs/tiny-50M.gguf ] && ASSETS="$ASSETS outputs/tiny-50M.gguf"
+          [ -f outputs/ci-summary.md ] && ASSETS="$ASSETS outputs/ci-summary.md"
+          # shellcheck disable=SC2086
+          gh release create "$TAG" --title "$TAG" --notes "Automated training run. See outputs/ci-summary.md." $ASSETS
