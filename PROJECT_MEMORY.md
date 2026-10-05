@@ -68,3 +68,7 @@ Corrected English:
   Confirmed: training GPU-তে চলছে (cuda=True, Tesla T4, GPU RAM 2.9GB, loss 8.84→1.96, 1.81s/it).
 - [2026-10-05] Training COMPLETE ("ekhon ki train holo?") — 100% 94/94, train_loss 1.696, loss 9.117→0.9554, `saved` + Hub-এ `uploaded` ✅।
   Implemented: `code_long` → `iamtarun/python_code_instructions_18k_alpaca` (parquet, public, 349 likes; script-based codeparrot নতুন datasets lib-এ dead) + alpaca-style handler।
+- [2026-10-05] Test inference ("Test inference — Hub-এর model দিয়ে...") — approved (user chose option 1)।
+  Implemented: `scripts/infer.py` (Hub subfolder / local, char-ord encoding = training-এর মতো, temperature/top-p sampling)।
+  Verified locally: encode/decode roundtrip OK + random-weight ckpt-এ generate mechanics OK (gibberish expected)।
+  Honest note: weights char-level pseudo-token ids-এ train হয়েছে, BPE tokenizer compatible নয় — output demo-quality হবে; real quality = ভবিষ্যৎ কাজ (BPE wiring + longer training)।
