@@ -96,10 +96,14 @@ jobs:
           cat outputs/ci-summary.md
 
       - name: Upload to HuggingFace Hub
-        if: inputs.upload_hub != false && secrets.HF_TOKEN != ''
+        if: inputs.upload_hub != false
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN secret not set — skipping Hub upload."
+            exit 0
+          fi
           python -c "
           from huggingface_hub import HfApi
           import os
