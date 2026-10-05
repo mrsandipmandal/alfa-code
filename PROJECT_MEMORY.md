@@ -82,3 +82,5 @@ Corrected English:
   Verified locally: mock path OK (reason + filenames shown); real path OK (/tmp/bpe-ckpt, CPU, code block generated)।
 - [2026-10-05] UI import fix (Colab `ModuleNotFoundError: model_backend`) — `from app.ui import demo` package mode-এ plain `model_backend` import fail হয়েছিল।
   Implemented: `app/ui.py` try/except import (package → script fallback)। দুটো mode-ই stubbed gradio দিয়ে verified।
+- [2026-10-05] Empty-output fix ("konokichui output nai") — tiny model মাঝে মাঝে EOS/whitespace ছাড়া কিছু generate করে না → খালি box।
+  Implemented: backend-এ 3-try retry (warming temperature) + খালি থাকলে স্পষ্ট message; output-এ word-count। দুটো path-ই verified।
