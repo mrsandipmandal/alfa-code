@@ -12,7 +12,7 @@ Unified row schema (jsonl):
 
 Datasets (all public, Colab T4 friendly; each has fallbacks in SOURCES):
   code_small_test : HuggingFaceH4/CodeAlpaca_20K   (prompt/completion)
-  code_long       : codeparrot/github-code-clean [Python-all] (long files, high context)
+  code_long       : iamtarun/python_code_instructions_18k_alpaca (18k python rows, high context)
   code_instruct   : bigcode/self-oss-instruct (-> CodeAlpaca fallback)
   reasoning       : Open-Orca/OpenOrca
   image_to_code   : HuggingFaceM4/websight         (screenshot -> html)
@@ -40,7 +40,7 @@ MAP = {
     # coding — short instruct (public, no login needed)
     "code_small_test": ("HuggingFaceH4/CodeAlpaca_20K", None, None),
     # coding — long files, high context (public, streams well)
-    "code_long": ("codeparrot/github-code-clean", "Python-all", None),
+    "code_long": ("iamtarun/python_code_instructions_18k_alpaca", None, None),
     # coding — instruct mix
     "code_instruct": ("bigcode/self-oss-instruct", None, None),
     "reasoning": ("Open-Orca/OpenOrca", None, None),
@@ -57,7 +57,7 @@ MAP = {
 # microsoft/MSR-VTT does not exist). First success wins.
 SOURCES = {
     "code_long": [
-        ("codeparrot/github-code-clean", "Python-all", None),
+        ("iamtarun/python_code_instructions_18k_alpaca", None, None),
         ("HuggingFaceH4/CodeAlpaca_20K", None, None),
     ],
     "code_small_test": [
@@ -232,10 +232,20 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
                     r.get("completion", ""), ds_id, max_prompt, max_answer))
             elif name == "code_long":
                 prompt, _ = _code_text_row(r)
-                # long-context: keep file body as prompt, ask to complete/explain
-                rows_out.append(normalize_code_row(
-                    f"Complete and explain this file:\n{CODE_OPEN}\n{prompt}\n{CODE_CLOSE}",
-                    prompt, ds_id, max_prompt, max_answer))
+                if len(prompt) < 200 and (r.get("instruction") or r.get("input") or r.get("output")):
+                    # alpaca-style python instruction rows (e.g. iamtarun 18k)
+                    instr = (r.get("instruction") or "")
+                    if r.get("input"):
+                        instr += "\n" + r.get("input")
+                    ans = r.get("output") or r.get("response") or instr
+                    rows_out.append(normalize_code_row(
+                        f"Complete and explain this code:\n{CODE_OPEN}\n{instr}\n{CODE_CLOSE}",
+                        ans, ds_id, max_prompt, max_answer))
+                else:
+                    # long-context: keep file body as prompt, ask to complete/explain
+                    rows_out.append(normalize_code_row(
+                        f"Complete and explain this file:\n{CODE_OPEN}\n{prompt}\n{CODE_CLOSE}",
+                        prompt, ds_id, max_prompt, max_answer))
             elif name in ("code_instruct", "reasoning"):
                 prompt = r.get("instruction") or r.get("prompt") or r.get("question") or ""
                 answer = r.get("output") or r.get("response") or r.get("answer") or ""
