@@ -71,6 +71,15 @@ def main():
                     "labels": torch.tensor(ids, dtype=torch.long)}
 
     print(f"data: {args.data} exists={Path(args.data).exists()}")
+    cuda = torch.cuda.is_available()
+    print(f"torch={torch.__version__} cuda={cuda}", flush=True)
+    if cuda:
+        print(f"gpu: {torch.cuda.get_device_name(0)} "
+              f"({torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB)", flush=True)
+    else:
+        print("WARNING: CUDA not visible — training will run on CPU (~10x slower). "
+              "On Colab: Runtime > Change runtime type > T4 GPU, then restart + rerun. "
+              "If torch is CPU-only, reinstall with CUDA support.", flush=True)
     model_cfg = LlamaConfig(
         hidden_size=int(mdl.get("hidden_size", 512)),
         num_hidden_layers=int(mdl.get("num_layers", 8)),

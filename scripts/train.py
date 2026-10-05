@@ -127,6 +127,13 @@ def main():
 
     print(f"config: seq_len={cfg['max_seq_len']} rope_theta={cfg['rope_theta']} "
           f"bs={cfg['batch_size']} accum={cfg['grad_accum']} ckpt={cfg['grad_ckpt']}")
+    cuda = torch.cuda.is_available()
+    print(f"torch={torch.__version__} cuda={cuda}", flush=True)
+    if cuda:
+        print(f"gpu: {torch.cuda.get_device_name(0)}", flush=True)
+    else:
+        print("WARNING: CUDA not visible — training will run on CPU (~10x slower). "
+              "On Colab: Runtime > Change runtime type > T4 GPU, then restart + rerun.", flush=True)
 
     model_cfg = LlamaConfig(
         hidden_size=cfg["hidden_size"], num_hidden_layers=cfg["num_layers"],
