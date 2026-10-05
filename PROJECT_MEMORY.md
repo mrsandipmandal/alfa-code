@@ -89,6 +89,9 @@ Corrected English:
   Verified: stubbed-gradio import, engine info, clear, chat-turn streaming, multi-turn accumulation — all OK।
 - [2026-10-05] Gradio5 Chatbot fix ("?" — messages format error) — পুরোনো `[[user, bot]]` tuple format Gradio 5 reject করে।
   Implemented: history এখন `[{role, content}]` messages format (`_to_messages`/`_to_pairs`); roundtrip + multi-turn verified।
+- [2026-10-05] HTML design implement (pasted echo_ai HTML) — approved (build mode)।
+  Implemented: `app/static/alfa.html` (Echo design pixel-kept, Alfa branding, code suggestions, tiny-50M pill, no external avatar) + `app/server.py` (GET /, GET /api/status, POST /api/generate JSON+multipart)।
+  Verified live: status/mock/generate/page-200 + real-ckpt multipart with file context — all OK। Run: `python app/server.py` → :8000।
 - [2026-10-05] Echo pixel-theme ("valo kore pixel wise dakh... without name and icons") — approved (build mode)।
   Implemented: `app/ui.py` rewrite — near-black #08080a + purple aurora glow + 24px frame; sidebar (Alfa logo, New Chat, Chat/Code/Images/Videos nav, TODAY history, Pro card, User row);
   center orb (pure CSS gradient) + Welcome + big headline + 3 suggestion cards + glowing prompt bar + uploads + Deep Think + History;
