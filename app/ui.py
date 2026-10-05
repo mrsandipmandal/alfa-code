@@ -74,14 +74,41 @@ def _engine_line():
 
 
 def _history_md(history):
-    if not history:
+    pairs = _to_pairs(history)
+    if not pairs:
         return "<div class='alfa-hist'>No chats yet.</div>"
-    lines = "".join(f"<div>{(h[0] or '')[:34]}</div>" for h in history[-8:])
+    lines = "".join(f"<div>{(u or '')[:34]}</div>" for u, _ in pairs[-8:])
     return f"<div class='alfa-hist'>{lines}</div>"
 
 
+def _to_messages(pairs):
+    """Gradio 5 Chatbot format: [{'role':..,'content':..}, ...]."""
+    msgs = []
+    for u, b in pairs:
+        msgs.append({"role": "user", "content": u or ""})
+        msgs.append({"role": "assistant", "content": b or ""})
+    return msgs
+
+
+def _to_pairs(messages):
+    """Parse messages-format history back into [[user, bot], ...]."""
+    messages = messages or []
+    pairs = []
+    i = 0
+    while i < len(messages):
+        m = messages[i]
+        u = m.get("content", "") if isinstance(m, dict) else ""
+        b = ""
+        if i + 1 < len(messages) and isinstance(messages[i + 1], dict):
+            b = messages[i + 1].get("content", "")
+            i += 1
+        pairs.append([u, b])
+        i += 1
+    return pairs
+
+
 def _chat_turn(prompt, history, image, file, video, deep_think):
-    history = list(history or [])
+    pairs = _to_pairs(history)
     user_label = (prompt or "")[:200]
     n_tokens = 512 if deep_think else 256
     final_md = ""
@@ -89,8 +116,9 @@ def _chat_turn(prompt, history, image, file, video, deep_think):
     for status, chat_md in generate(prompt, image, file, video,
                                     max_new_tokens=n_tokens):
         final_md = chat_md
-        yield status, history + [[user_label, chat_md + "\n\n_...generating..._"]], _history_md(history)
-    yield "[Done]", history + [[user_label, final_md]], _history_md(history + [[user_label, final_md]])
+        yield status, _to_messages(pairs + [[user_label, chat_md + "\n\n_...generating..._"]]), _history_md(pairs)
+    done_pairs = pairs + [[user_label, final_md]]
+    yield "[Done]", _to_messages(done_pairs), _history_md(done_pairs)
 
 
 def _clear():
