@@ -5,7 +5,12 @@ when ALFA_MODEL is available, otherwise mock mode with the reason shown.
 """
 import gradio as gr
 
-from model_backend import generate
+try:
+    # package mode: `from app.ui import demo` (Colab cell, python -m app.ui)
+    from app.model_backend import generate
+except ImportError:
+    # script mode: `python app/ui.py` (script dir on sys.path)
+    from model_backend import generate
 
 with gr.Blocks(title="Alfa-Code") as demo:
     gr.Markdown("# Alfa-Code: reasoning + image + file + video")
