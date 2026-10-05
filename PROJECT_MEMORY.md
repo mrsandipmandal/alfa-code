@@ -72,3 +72,7 @@ Corrected English:
   Implemented: `scripts/infer.py` (Hub subfolder / local, char-ord encoding = training-এর মতো, temperature/top-p sampling)।
   Verified locally: encode/decode roundtrip OK + random-weight ckpt-এ generate mechanics OK (gibberish expected)।
   Honest note: weights char-level pseudo-token ids-এ train হয়েছে, BPE tokenizer compatible নয় — output demo-quality হবে; real quality = ভবিষ্যৎ কাজ (BPE wiring + longer training)।
+- [2026-10-05] BPE wiring ("approve" — kano char-level?) — approved।
+  Implemented: `scripts/bpe.py` (shared: BPE load/encode/decode + char fallback); `train.py` + `train_hf.py` `--tokenizer` (default alfa-32k.json, missing → warning + char fallback); `infer.py` BPE encode/decode + unpadded prompt; `requirements.txt` accelerate>=1.1.0।
+  Verified locally: BPE roundtrip OK; train JsonlDS batches OK (shapes, ids<32000, masks); infer BPE end-to-end OK (prompt 24 toks, no pad waste)।
+  IMPORTANT: পুরোনো Hub checkpoint char-level — BPE-এর সাথে incompatible। Colab-এ tokenizer + training আবার চালাতে হবে।

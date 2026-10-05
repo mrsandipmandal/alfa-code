@@ -7,7 +7,10 @@ High-context + multimodal aware (mirrors scripts/train.py):
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
 def main():
@@ -18,10 +21,13 @@ def main():
     ap.add_argument("--config", default=os.getenv("ALFA_CONFIG", "configs/tiny-50M.yaml"))
     ap.add_argument("--max-seq-len", type=int, default=None)
     ap.add_argument("--batch-size", type=int, default=None)
+    ap.add_argument("--tokenizer", default=os.getenv("ALFA_TOKENIZER", "tokenizers/alfa-32k.json"),
+                    help="BPE tokenizer file (missing -> char-level fallback)")
     args = ap.parse_args()
 
     import yaml
     import torch
+    from bpe import char_encode, encode_text, load_bpe_tokenizer
     from transformers import LlamaConfig, LlamaForCausalLM, Trainer, TrainingArguments
     from torch.utils.data import Dataset
 
@@ -41,6 +47,9 @@ def main():
 
     print(f"config: seq_len={seq_len} rope={rope_theta} bs={bs} accum={accum} ckpt={grad_ckpt}")
 
+    bpe_tok = load_bpe_tokenizer(args.tokenizer)
+    use_bpe = bpe_tok is not None
+
     class JsonlDS(Dataset):
         def __init__(self, path, tok_len=8192):
             rows = [json.loads(l) for l in open(path, encoding="utf-8")]
@@ -59,13 +68,12 @@ def main():
                 pre += ["<video>"] * video_frames
             s = (" ".join(pre) + "\n" if pre else "") + (
                 r.get("prompt", "") + "\n" + r.get("think", "") + "\n" + r.get("answer", ""))
-            if len(s) > self.budget:
-                s = s[:self.budget] if truncation == "right" else s[-self.budget:]
-            ids = [min(ord(c), 30000) for c in s][:self.tok_len]
-            attn = [1] * len(ids)
-            pad = self.tok_len - len(ids)
-            ids += [0] * pad
-            attn += [0] * pad
+            if use_bpe:
+                ids, attn = encode_text(s, bpe_tok, self.tok_len, truncation)
+            else:
+                if len(s) > self.budget:
+                    s = s[:self.budget] if truncation == "right" else s[-self.budget:]
+                ids, attn = char_encode(s, self.tok_len)
             return {"input_ids": torch.tensor(ids, dtype=torch.long),
                     "attention_mask": torch.tensor(attn, dtype=torch.long),
                     "labels": torch.tensor(ids, dtype=torch.long)}

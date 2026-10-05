@@ -1,9 +1,8 @@
 """Test inference with a trained tiny-50M checkpoint.
 
-The model was trained with char-level pseudo-tokenization
-(ids = ord(char) capped at 30000), so inference MUST use the same
-encoding — the BPE tokenizer in tokenizers/ is NOT compatible
-with these weights (wiring BPE is future work).
+Encoding MUST match training: BPE via tokenizers/alfa-32k.json when the
+checkpoint was BPE-trained, else legacy char-level fallback. Mixing them
+(char-trained weights + BPE ids or vice versa) gives garbage.
 
 Sources:
   Hub (private repo, needs HF_TOKEN env):
@@ -11,35 +10,17 @@ Sources:
         --prompt "def fib(n):" --max-new-tokens 200
   Local dir:
     python scripts/infer.py --local /content/outputs/tiny-50M --prompt "def fib(n):"
-
-Expects: real (demo-quality) continuation text. Tiny 50M + 1 epoch +
-char-level encoding => proves the pipeline, not SOTA code quality.
 """
 import argparse
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bpe import char_encode, decode_ids, encode_text, load_bpe_tokenizer
 
 import torch
 from transformers import LlamaForCausalLM
-
-VOCAB = 32000
-
-
-def encode(text: str, max_len: int = 2048) -> torch.Tensor:
-    ids = [min(ord(c), VOCAB - 1) for c in text][:max_len]
-    return torch.tensor([ids], dtype=torch.long)
-
-
-def decode(ids) -> str:
-    out = []
-    for i in ids:
-        i = int(i)
-        if i in (9, 10, 13) or 32 <= i < 0x110000:
-            try:
-                out.append(chr(i))
-            except ValueError:
-                pass
-    return "".join(out)
 
 
 def resolve_ckpt(args) -> str:
@@ -71,9 +52,14 @@ def main():
     ap.add_argument("--temperature", type=float, default=0.8)
     ap.add_argument("--top-p", type=float, default=0.95)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--tokenizer", default="tokenizers/alfa-32k.json",
+                    help="BPE tokenizer file (missing -> char-level fallback)")
+    ap.add_argument("--max-prompt-tokens", type=int, default=1024)
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
+    tok = load_bpe_tokenizer(args.tokenizer)
+    print(f"encoding: {'BPE' if tok is not None else 'CHAR fallback'}", flush=True)
     ckpt = resolve_ckpt(args)
     print(f"loading {ckpt} ...", flush=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -86,16 +72,22 @@ def main():
     text = args.prompt
     if args.wrap:
         text = f"Complete and explain this file:\n<code>\n{args.prompt}\n</code>"
-    inp = encode(text).to(device)
+    if tok is not None:
+        ids, _ = encode_text(text, tok, args.max_prompt_tokens, pad=False)
+    else:
+        ids, _ = char_encode(text, args.max_prompt_tokens)
+    inp = torch.tensor([ids], dtype=torch.long).to(device)
     print(f"prompt tokens: {inp.shape[1]}", flush=True)
 
+    pad_id = tok.pad_token_id if (tok is not None and tok.pad_token_id is not None) else 0
+    eos_id = tok.eos_token_id if tok is not None else None
     with torch.no_grad():
         out = model.generate(
             inp, max_new_tokens=args.max_new_tokens,
             do_sample=True, temperature=args.temperature, top_p=args.top_p,
-            pad_token_id=0,
+            pad_token_id=pad_id, eos_token_id=eos_id,
         )
-    gen = decode(out[0][inp.shape[1]:])
+    gen = decode_ids(out[0][inp.shape[1]:].tolist(), tok)
     print("=" * 60)
     print("PROMPT:")
     print(text)

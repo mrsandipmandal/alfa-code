@@ -12,7 +12,11 @@ High-context + multimodal aware:
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bpe import char_encode, encode_text, load_bpe_tokenizer
 
 import torch
 import yaml
@@ -75,7 +79,8 @@ def build_text(row: dict, image_tokens: int, video_frames: int,
 
 class JsonlDS(Dataset):
     def __init__(self, path, tok_len=8192, truncation="right",
-                 image_tokens=256, video_frames=4, video_tpp=64):
+                 image_tokens=256, video_frames=4, video_tpp=64,
+                 tokenizer_path="tokenizers/alfa-32k.json"):
         self.rows = [json.loads(l) for l in open(path, encoding="utf-8")]
         self.tok_len = tok_len
         # ~4 chars per token heuristic for char-level demo tokenization
@@ -84,6 +89,8 @@ class JsonlDS(Dataset):
         self.image_tokens = image_tokens
         self.video_frames = video_frames
         self.video_tpp = video_tpp
+        self.tok = load_bpe_tokenizer(tokenizer_path)
+        self.use_bpe = self.tok is not None
 
     def __len__(self):
         return len(self.rows)
@@ -91,15 +98,12 @@ class JsonlDS(Dataset):
     def __getitem__(self, i):
         r = self.rows[i]
         s = build_text(r, self.image_tokens, self.video_frames, self.video_tpp)
-        if len(s) > self.char_budget:
-            s = s[:self.char_budget] if self.truncation == "right" else s[-self.char_budget:]
-        # char-level pseudo-tokenization for demo
-        # (real run swaps this for train_tokenizer.py + proper encode)
-        ids = [min(ord(c), 30000) for c in s][:self.tok_len]
-        attn = [1] * len(ids)
-        pad = self.tok_len - len(ids)
-        ids += [0] * pad
-        attn += [0] * pad
+        if self.use_bpe:
+            ids, attn = encode_text(s, self.tok, self.tok_len, self.truncation)
+        else:
+            if len(s) > self.char_budget:
+                s = s[:self.char_budget] if self.truncation == "right" else s[-self.char_budget:]
+            ids, attn = char_encode(s, self.tok_len)
         return {"input_ids": torch.tensor(ids, dtype=torch.long),
                 "attention_mask": torch.tensor(attn, dtype=torch.long),
                 "labels": torch.tensor(ids, dtype=torch.long)}
@@ -113,6 +117,8 @@ def main():
     ap.add_argument("--batch-size", type=int, default=None)
     ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--tokenizer", default="tokenizers/alfa-32k.json",
+                    help="BPE tokenizer file (missing -> char-level fallback)")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
@@ -152,7 +158,8 @@ def main():
                  truncation=cfg["truncation"],
                  image_tokens=cfg["image_tokens"],
                  video_frames=cfg["video_frames"],
-                 video_tpp=cfg["video_tokens_per_frame"])
+                 video_tpp=cfg["video_tokens_per_frame"],
+                 tokenizer_path=args.tokenizer)
     targs = TrainingArguments(
         output_dir=cfg["output_dir"],
         per_device_train_batch_size=cfg["batch_size"],
