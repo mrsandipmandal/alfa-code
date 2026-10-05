@@ -133,11 +133,11 @@ TEMPLATES = {
 }
 
 
-with gr.Blocks(title="Alfa-Code", css=CSS, elem_classes="alfa-app") as demo:
+with gr.Blocks(title="AI Workspace", css=CSS, elem_classes="alfa-app") as demo:
     with gr.Row(elem_classes="alfa-frame"):
         # ---------- sidebar ----------
         with gr.Column(scale=1, elem_classes="alfa-side"):
-            gr.Markdown("<div class='alfa-logo'>Alfa</div>")
+            gr.Markdown("<div class='alfa-logo'>✦</div>")
             new_chat = gr.Button("+ New Chat", elem_classes="alfa-newchat")
             nav_chat = gr.Button("Chat", elem_classes="alfa-nav-active")
             nav_code = gr.Button("Code", elem_classes="alfa-nav")
@@ -147,12 +147,12 @@ with gr.Blocks(title="Alfa-Code", css=CSS, elem_classes="alfa-app") as demo:
             hist_md = gr.Markdown("<div class='alfa-hist'>No chats yet.</div>")
             gr.Markdown("<div class='alfa-pro'>Upgrade to Pro<br>"
                         "Get premium features, latest models and unlimited usage.<br><br>"
-                        "<b>Alfa Pro</b></div>")
+                        "<b>Pro Access</b></div>")
             gr.Markdown("<div class='alfa-user'>User</div>")
         # ---------- main ----------
         with gr.Column(scale=4, elem_classes="alfa-main"):
             gr.HTML("<div class='alfa-orb'></div>")
-            gr.Markdown("<div class='alfa-welcome'>Welcome to Alfa AI</div>")
+            gr.Markdown("<div class='alfa-welcome'>Welcome to AI Assistant</div>")
             gr.Markdown("<div class='alfa-headline'>How Can I Assist You?</div>")
             with gr.Row():
                 sug1 = gr.Button("Write a todo list for my day",

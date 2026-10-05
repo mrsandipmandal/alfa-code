@@ -97,3 +97,10 @@ Corrected English:
   center orb (pure CSS gradient) + Welcome + big headline + 3 suggestion cards + glowing prompt bar + uploads + Deep Think + History;
   NO brand names, NO emoji/icons (verified: no non-text glyphs); backend untouched।
 - [2026-10-05] Weak-output fix (শুধু `,` এসেছিল) — punctuation-only output-ও retry হবে (8+ word-char না থাকলে); notebook UI cell এখন `git pull` + reload করে (restart ছাড়াই fix পাবে)। Verified (forced `,` → retry → fallback message)।
+- [2026-10-05] Pixel-perfect Dark AI Dashboard redesign ("make this design as it is without name and logos") — approved ("approve")।
+  Implemented: `app/static/alfa.html` রেফারেন্স স্ক্রিনশটের সাথে হুবহু মিলিয়ে পুনর্নির্মাণ:
+  - টপ-রাইট কোণে পার্পল অরোরা এবং লাইট রে/বিম ইফেক্ট (CSS multilayer radial/linear gradients ও blur);
+  - সাইডবার: নির্দিষ্ট ব্র্যান্ড নাম ও লোগো মুক্ত স্পার্কল আইকন, `+ New Chat` বাটন, Chat / API / Community নেভিগেশন, Pinned / Today / Yesterday / Previous 7 Days হিস্ট্রি গ্রুপ, Upgrade to Pro গ্লাস কার্ড এবং জেনেরিক User প্রোফাইল রো;
+  - সেন্টার: অ্যানিমেটেড ভাসমান পার্পল সেলিস্টিয়াল অর্ব (অরবিট রিং ও স্পার্কল কোর), "Welcome to AI Assistant", "How Can I Assist You?" হেডলাইন এবং ৩টি গ্লাস সাজেশনের কার্ড উইথ মিডিয়া আইকন;
+  - নিয়ন গ্লোয়িং প্রম্পট বার: পার্পল আউটার গ্লো (`box-shadow`), স্পার্কল আইকনসহ টেক্সট বক্স, মিডিয়া টুলবার (চ্যাট, ইমেজ, মিউজিক), মডেল সিলেক্টর পিল, পেপারক্লিপ, মাইক এবং অ্যানিমেটেড অডিও ওয়েভফর্ম বাটন;
+  - `app/ui.py`-তেও নিউট্রাল ব্র্যান্ডিং ("AI Workspace", "Welcome to AI Assistant", "Pro Access", "✦") প্রয়োগ করা হয়েছে; ব্যাকএন্ড ও API সম্পূর্ণ অপরিবর্তিত ও কার্যকর।
