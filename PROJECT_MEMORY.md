@@ -56,7 +56,10 @@ Corrected English:
   `microsoft/MSR-VTT` (missing) → `AlexZigma/msr-vtt` → `friedrichor/MSR-VTT/train_7k` fallback;
   SOURCES fallback chain (`_load_rows_first`), caption-list + image/video index-ref handling।
   Note: Cell 5 train 17min+ normal (500 rows × 2048 ctx, grad-ckpt); GPU meter lag হতে পারে — 40min+ আটকে থাকলে rows কমাতে হবে।
-- [2026-10-05] GPU-not-used fix ("sudhu ram use korche kano?") — approved (implied, training blocked slow)。
+- [2026-10-05] GPU-not-used fix ("sudhu ram use korche kano?") — approved (implied, training blocked slow).
   Implemented: `train.py` + `train_hf.py` CUDA diagnostics print (torch version, cuda flag, GPU name, loud CPU warning);
-  notebook-এ GPU check cell (torch.cuda.is_available + restart hint)。
-  Root cause hypothesis: torch CPU-only install বা runtime GPU detach → Trainer silently CPU-তে চলে (~10x slow), তাই RAM 7.2GB + GPU 0.0。
+  notebook-এ GPU check cell (torch.cuda.is_available + restart hint).
+  Root cause hypothesis: torch CPU-only install বা runtime GPU detach → Trainer silently CPU-তে চলে (~10x slow), তাই RAM 7.2GB + GPU 0.0.
+- [2026-10-05] Clone-cell fix ("tarin hoye gache?") — Colab-এ `!rm -rf /content/alfa` shell-এর cwd মুছে দেওয়ায় clone fail হয়েছিল।
+  Implemented: clone cell-এ আগে `%cd /content`, তারপর `rm -rf` + clone। দুটো notebook-এই fix + push।
+  Note: সকাল 07:36-এর পুরোনো run-এ training সফল হয়েছিল (214M outputs: checkpoint-32, config.json, model.safetensors) — Cell 19-এর `ls` ও Cell 20-এর `uploaded` সেই পুরোনো files; এই run-এ নতুন training হয়নি।
