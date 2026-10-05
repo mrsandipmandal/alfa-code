@@ -8,6 +8,7 @@ Env:
   ALFA_TOKENIZER BPE file      (default: tokenizers/alfa-32k.json)
 """
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -110,17 +111,22 @@ def generate(prompt, image=None, file=None, video=None,
 
         gen = _run(temperature, None)
         tries = 1
+
+        def _meaningful(t: str) -> bool:
+            # tiny models sometimes emit EOS/whitespace/a lone punctuation (",", ".")
+            return len(re.sub(r"\W", "", t)) >= 8
+
         # tiny models sometimes emit EOS/whitespace immediately -> retry warmer
-        while not gen.strip() and tries < 3:
+        while not _meaningful(gen) and tries < 3:
             tries += 1
-            yield "[Coding...]", f"{header}Empty output, retrying ({tries}/3)..."
+            yield "[Coding...]", f"{header}Weak output, retrying ({tries}/3)..."
             gen = _run(min(temperature + 0.2 * tries, 1.5), 1000 + tries)
-        if gen.strip():
+        if _meaningful(gen):
             code = f"```python\n{gen}\n```\n\n_{len(gen.split())} words generated._"
         else:
-            code = ("_No output after 3 tries — the tiny model emitted only "
-                    "blank/EOS tokens. Try a code-style prompt (e.g. `def fib(n):`), "
-                    "or retrain longer for better results._")
+            code = ("_No usable output after 3 tries — the tiny model emitted only "
+                    "blank/punctuation tokens. Try a code-style prompt (e.g. `def fib(n):`), "
+                    "press Generate again, or retrain longer for better results._")
         yield "[Coding...]", f"{header}{code}"
 
     yield ("[Done]",
