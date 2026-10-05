@@ -84,3 +84,4 @@ Corrected English:
   Implemented: `app/ui.py` try/except import (package → script fallback)। দুটো mode-ই stubbed gradio দিয়ে verified।
 - [2026-10-05] Empty-output fix ("konokichui output nai") — tiny model মাঝে মাঝে EOS/whitespace ছাড়া কিছু generate করে না → খালি box।
   Implemented: backend-এ 3-try retry (warming temperature) + খালি থাকলে স্পষ্ট message; output-এ word-count। দুটো path-ই verified।
+- [2026-10-05] Weak-output fix (শুধু `,` এসেছিল) — punctuation-only output-ও retry হবে (8+ word-char না থাকলে); notebook UI cell এখন `git pull` + reload করে (restart ছাড়াই fix পাবে)। Verified (forced `,` → retry → fallback message)।
