@@ -63,3 +63,6 @@ Corrected English:
 - [2026-10-05] Clone-cell fix ("tarin hoye gache?") — Colab-এ `!rm -rf /content/alfa` shell-এর cwd মুছে দেওয়ায় clone fail হয়েছিল।
   Implemented: clone cell-এ আগে `%cd /content`, তারপর `rm -rf` + clone। দুটো notebook-এই fix + push।
   Note: সকাল 07:36-এর পুরোনো run-এ training সফল হয়েছিল (214M outputs: checkpoint-32, config.json, model.safetensors) — Cell 19-এর `ls` ও Cell 20-এর `uploaded` সেই পুরোনো files; এই run-এ নতুন training হয়নি।
+- [2026-10-05] codeparrot trust fix ("dakho train hocche?") — `codeparrot/github-code-clean` loading script চায়, `trust_remote_code=False` দিয়ে fail হয়েছিল → CodeAlpaca fallback কাজ করেছিল।
+  Implemented: `codeparrot/*` source-এ `trust_remote_code=True` (explicit note-সহ)। পরের run থেকে code_long আসল long-code দিয়ে আসবে।
+  Confirmed: training GPU-তে চলছে (cuda=True, Tesla T4, GPU RAM 2.9GB, loss 8.84→1.96, 1.81s/it)।
