@@ -80,3 +80,5 @@ Corrected English:
   Implemented: `app/model_backend.py` (নতুন, gradio ছাড়া testable: ALFA_MODEL/ALFA_TOKENIZER env, real/char/mock mode, training-shape prompt + reasoning yields);
   `app/ui.py` thin wrapper (ALFA_PORT/ALFA_SHARE env); notebook-এ UI launch cell (share=True)।
   Verified locally: mock path OK (reason + filenames shown); real path OK (/tmp/bpe-ckpt, CPU, code block generated)।
+- [2026-10-05] UI import fix (Colab `ModuleNotFoundError: model_backend`) — `from app.ui import demo` package mode-এ plain `model_backend` import fail হয়েছিল।
+  Implemented: `app/ui.py` try/except import (package → script fallback)। দুটো mode-ই stubbed gradio দিয়ে verified।
