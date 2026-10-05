@@ -97,13 +97,30 @@ def generate(prompt, image=None, file=None, video=None,
         inp = torch.tensor([ids], dtype=torch.long).to(b["device"])
         pad_id = (b["tok"].pad_token_id
                   if (b["tok"] is not None and b["tok"].pad_token_id is not None) else 0)
-        with torch.no_grad():
-            out = b["model"].generate(
-                inp, max_new_tokens=max_new_tokens,
-                do_sample=True, temperature=temperature, top_p=0.95,
-                pad_token_id=pad_id)
-        gen = decode_ids(out[0][inp.shape[1]:].tolist(), b["tok"])
-        code = f"```python\n{gen}\n```"
+
+        def _run(temp, seed):
+            if seed is not None:
+                torch.manual_seed(seed)
+            with torch.no_grad():
+                out = b["model"].generate(
+                    inp, max_new_tokens=max_new_tokens,
+                    do_sample=True, temperature=temp, top_p=0.95,
+                    pad_token_id=pad_id)
+            return decode_ids(out[0][inp.shape[1]:].tolist(), b["tok"])
+
+        gen = _run(temperature, None)
+        tries = 1
+        # tiny models sometimes emit EOS/whitespace immediately -> retry warmer
+        while not gen.strip() and tries < 3:
+            tries += 1
+            yield "[Coding...]", f"{header}Empty output, retrying ({tries}/3)..."
+            gen = _run(min(temperature + 0.2 * tries, 1.5), 1000 + tries)
+        if gen.strip():
+            code = f"```python\n{gen}\n```\n\n_{len(gen.split())} words generated._"
+        else:
+            code = ("_No output after 3 tries — the tiny model emitted only "
+                    "blank/EOS tokens. Try a code-style prompt (e.g. `def fib(n):`), "
+                    "or retrain longer for better results._")
         yield "[Coding...]", f"{header}{code}"
 
     yield ("[Done]",
