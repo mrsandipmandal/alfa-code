@@ -5,6 +5,9 @@ hf_transfer>=0.1
 pyyaml>=6.0
 tqdm>=4.66
 gradio>=5.0
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart>=0.0.9
 tokenizers>=0.20
 accelerate>=1.1.0
 torch --index-url https://download.pytorch.org/whl/cu121
