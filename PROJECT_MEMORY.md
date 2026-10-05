@@ -87,4 +87,8 @@ Corrected English:
 - [2026-10-05] Dashboard redesign ("use this image... for my alfa ai") — approved Full dashboard + Multi-turn + New Chat ("approve")।
   Implemented: `app/ui.py` rewrite — sidebar (logo, New Chat, Code/Images/Videos/Files nav, engine card) + top bar + hero (orb, welcome, big prompt bar) + Deep Think toggle + uploads + multi-turn Chatbot + 3 quick cards; dark glass CSS, orange accent; backend untouched।
   Verified: stubbed-gradio import, engine info, clear, chat-turn streaming, multi-turn accumulation — all OK।
+- [2026-10-05] Echo pixel-theme ("valo kore pixel wise dakh... without name and icons") — approved (build mode)।
+  Implemented: `app/ui.py` rewrite — near-black #08080a + purple aurora glow + 24px frame; sidebar (Alfa logo, New Chat, Chat/Code/Images/Videos nav, TODAY history, Pro card, User row);
+  center orb (pure CSS gradient) + Welcome + big headline + 3 suggestion cards + glowing prompt bar + uploads + Deep Think + History;
+  NO brand names, NO emoji/icons (verified: no non-text glyphs); backend untouched।
 - [2026-10-05] Weak-output fix (শুধু `,` এসেছিল) — punctuation-only output-ও retry হবে (8+ word-char না থাকলে); notebook UI cell এখন `git pull` + reload করে (restart ছাড়াই fix পাবে)। Verified (forced `,` → retry → fallback message)।
