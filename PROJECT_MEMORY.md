@@ -76,3 +76,7 @@ Corrected English:
   Implemented: `scripts/bpe.py` (shared: BPE load/encode/decode + char fallback); `train.py` + `train_hf.py` `--tokenizer` (default alfa-32k.json, missing → warning + char fallback); `infer.py` BPE encode/decode + unpadded prompt; `requirements.txt` accelerate>=1.1.0।
   Verified locally: BPE roundtrip OK; train JsonlDS batches OK (shapes, ids<32000, masks); infer BPE end-to-end OK (prompt 24 toks, no pad waste)।
   IMPORTANT: পুরোনো Hub checkpoint char-level — BPE-এর সাথে incompatible। Colab-এ tokenizer + training আবার চালাতে হবে।
+- [2026-10-05] UI wiring ("2. UI wiring — mock সরিয়ে trained model বসানো") — approved (user chose option 2)।
+  Implemented: `app/model_backend.py` (নতুন, gradio ছাড়া testable: ALFA_MODEL/ALFA_TOKENIZER env, real/char/mock mode, training-shape prompt + reasoning yields);
+  `app/ui.py` thin wrapper (ALFA_PORT/ALFA_SHARE env); notebook-এ UI launch cell (share=True)।
+  Verified locally: mock path OK (reason + filenames shown); real path OK (/tmp/bpe-ckpt, CPU, code block generated)।
