@@ -106,6 +106,10 @@ Corrected English:
   Implemented in `alfa.html` only (`alfa-design.html` untouched, still byte-identical): model pill + dropdown = tiny-50M/tiny-50M-long (256/512 tokens);
   wave button = send; paperclip = file attach + image tool = image attach; TODAY panel = live history, click → full communication in main area;
   mic + music buttons removed (no backend)। Verified served + API।
+- [2026-10-05] Real-engine proof ("ball model chole na to") — local checkpoint ছিল না বলে mock চলছিল।
+  Implemented: mini-data (30 rows) + BPE tokenizer + torch-only manual train (accelerate নেই বলে Trainer নয়), 30 steps loss falling → `/tmp/alfa-real-ckpt`;
+  server + API verify: `{"mode":"real"}` ✅। User-এর জন্য: Hub ckpt download বা full train করলে UI auto real হবে।
+- [2026-10-05] Toolbar simplify ("Attach file button থাকবে, বাকি লাগছে না") — `alfa.html` থেকে chat/image/music/mic buttons removed, শুধু paperclip (সব file type); design file untouched।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
