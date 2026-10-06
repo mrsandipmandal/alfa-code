@@ -120,6 +120,9 @@ Corrected English:
 - [2026-10-05] Tiny-50M release ("Tiny-50M er ekta release dau... version 0.0.1...") — approved (build mode)।
   Implemented: tag v0.0.1 + GitHub release (Q8_0 59.5MB + Q4_0 31.5MB + demo tokenizer from local smoke ckpt, honestly labeled preview);
   README version → 0.0.1। Version scheme: 0.0.x tiny fixes, 1B next as v0.1.0।
+- [2026-10-05] OOM fix (Colab `torch.OutOfMemoryError` at first optimizer step on 1B/T4) — root cause: 1.1B Adam fp32 states (~9GB) + weights/grads exceed T4.
+  Implemented: `--optim adamw_8bit` (halves optimizer VRAM) in both train scripts + `optim: adamw_8bit` in base-1B.yaml; `--grad-accum` override; OOM catch with 4-step fix hints; bitsandbytes in notebook pip cell।
+  Verified: argparse flags, config load both yamls, OptimizerNames valid, notebooks valid। Colab: restart runtime first (old processes hold VRAM), then scale-up cell rerun।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
