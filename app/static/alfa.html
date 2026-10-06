@@ -253,33 +253,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
             </svg>
           </button>
-          <ul class="space-y-1">
-            <li class="group flex items-center justify-between py-1 px-1.5 rounded bg-white/[0.03] text-white/90 cursor-pointer">
-              <div class="flex items-center space-x-2 truncate">
-                <span class="w-2.5 h-2.5 rounded-full border border-purple-400/80 flex-shrink-0"></span>
-                <span class="truncate">Solutions nor hands n...</span>
-              </div>
-              <span class="text-[#65697d] text-xs">•••</span>
-            </li>
-            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
-              <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219M21 16c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219"/>
-              </svg>
-              <span class="truncate">By activities tomorrow ui...</span>
-            </li>
-            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
-              <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <path d="M21 15l-5-5L5 21"/>
-              </svg>
-              <span class="truncate">Hard prioritize group strea...</span>
-            </li>
-            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
-              <span class="w-2.5 h-2.5 rounded-full border border-[#525666] flex-shrink-0"></span>
-              <span class="truncate">Out expectations scraps c...</span>
-            </li>
-          </ul>
+          <ul id="historyList" class="space-y-1">
         </div>
 
         <!-- YESTERDAY SECTION -->
@@ -485,7 +459,7 @@
             
             <!-- Left Tool Icons -->
             <div class="flex items-center space-x-2 text-[#717586]">
-              <button title="Conversations" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
+              <button id="convToolBtn" title="Conversations" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
                 </svg>
@@ -497,9 +471,12 @@
                   <path d="M21 15l-5-5L5 21"/>
                 </svg>
               </button>
-              <button title="Audio Mode" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
+              <!-- Audio Mode: removed (no audio backend) -->
+              <button id="imgToolBtn" title="Attach image" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                  <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219M21 16c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="M21 15l-5-5L5 21"/>
                 </svg>
               </button>
             </div>
@@ -516,7 +493,7 @@
                       <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
                     </svg>
                   </div>
-                  <span id="currentModelLabel" class="text-[11px] text-[#cfd2dd]">3.5 Sonnet</span>
+                  <span id="currentModelLabel" class="text-[11px] text-[#cfd2dd]">tiny-50M</span>
                   <svg class="w-3 h-3 text-[#777b8d]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                   </svg>
@@ -524,15 +501,12 @@
 
                 <!-- Hidden Model Dropdown Menu -->
                 <div id="modelDropdownMenu" class="hidden absolute right-0 bottom-full mb-2 w-40 rounded-xl bg-[#171822] border border-[#2a2c3d] shadow-2xl py-1 z-30 text-xs">
-                  <button onclick="changeModel('3.5 Sonnet')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-white flex items-center justify-between">
-                    <span>3.5 Sonnet</span>
+                  <button onclick="changeModel('tiny-50M')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-white flex items-center justify-between">
+                    <span>tiny-50M</span>
                     <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
                   </button>
-                  <button onclick="changeModel('Claude 3 Opus')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-[#9ca1b5]">
-                    <span>Claude 3 Opus</span>
-                  </button>
-                  <button onclick="changeModel('GPT-4o')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-[#9ca1b5]">
-                    <span>GPT-4o</span>
+                  <button onclick="changeModel('tiny-50M-long')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-[#9ca1b5]">
+                    <span>tiny-50M-long</span>
                   </button>
                 </div>
               </div>
@@ -544,12 +518,7 @@
                 </svg>
               </button>
 
-              <!-- Microphone -->
-              <button title="Voice input" class="p-1.5 text-[#73778a] hover:text-white rounded hover:bg-white/[0.04] transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z"/>
-                </svg>
-              </button>
+              <!-- voice/mic buttons removed: wave button sends; no voice backend -->
 
               <!-- Neon Voice Visualizer / Audio Wave Button -->
               <button id="sendVoiceBtn" title="Voice Response" class="h-8 px-2.5 rounded-lg bg-[#181926] border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] flex items-center justify-center space-x-1 hover:border-purple-400 transition-all group">
@@ -668,10 +637,28 @@
   grid.parentNode.insertBefore(box, grid.nextSibling);
   function showResult(html) { box.style.display = 'block'; box.innerHTML = html; }
 
-  function renderHistory() { /* TODAY list is static design; live chats shown on click-load only */ }
+  function renderHistory() {
+    var ul = document.getElementById('historyList');
+    if (!ul) return;
+    if (!exchanges.length) {
+      ul.innerHTML = '<li class="text-[#575a68] px-1.5">No chats yet.</li>';
+      return;
+    }
+    ul.innerHTML = exchanges.slice(-8).reverse().map(function (e, i) {
+      var idx = exchanges.length - 1 - i;
+      return '<li onclick="alfaLoad(' + idx + ')" class="py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors truncate">' + esc((e.prompt || '').slice(0, 34)) + '</li>';
+    }).join('');
+  }
+  window.alfaLoad = function (i) {
+    var e = exchanges[i];
+    if (!e) return;
+    document.getElementById('promptInput').value = e.prompt;
+    showResult('<div style="color:#575a68;font-size:11px;margin-bottom:4px">engine: ' + esc(e.engine || '?') + '</div>' + renderMd(e.markdown));
+  };
   function saveExchange(prompt, markdown, engine) {
     exchanges.push({ prompt: prompt, markdown: markdown, engine: engine, t: Date.now() });
     localStorage.setItem('alfa_chats', JSON.stringify(exchanges.slice(-50)));
+    renderHistory();
   }
 
   async function submit() {
@@ -719,13 +706,29 @@
     attachedFile = picker.files[0] || null;
     document.getElementById('promptInput').placeholder = attachedFile ? ('Attached: ' + attachedFile.name) : 'Ask AI anything or write your request...';
   });
-  // model pill -> token budget map (labels untouched)
+  // model pill -> token budget map (labels: tiny-50M=256, tiny-50M-long=512)
   document.querySelectorAll('#modelDropdownMenu button').forEach(function (b) {
     b.addEventListener('click', function () {
       var t = b.textContent.trim();
-      maxTokens = t.indexOf('Opus') >= 0 ? 512 : 256;
+      maxTokens = t.indexOf('long') >= 0 ? 512 : 256;
     });
   });
+  // image tool -> image picker, included in next submit
+  var imgPicker = document.createElement('input');
+  imgPicker.type = 'file'; imgPicker.accept = 'image/*'; imgPicker.style.display = 'none';
+  document.body.appendChild(imgPicker);
+  var imgBtn = document.getElementById('imgToolBtn');
+  if (imgBtn) imgBtn.addEventListener('click', function () { imgPicker.click(); });
+  imgPicker.addEventListener('change', function () {
+    attachedFile = imgPicker.files[0] || null;
+    document.getElementById('promptInput').placeholder = attachedFile ? ('Attached: ' + attachedFile.name) : 'Ask AI anything or write your request...';
+  });
+  // conversations tool -> focus prompt
+  var convBtn = document.getElementById('convToolBtn');
+  if (convBtn) convBtn.addEventListener('click', function () {
+    document.getElementById('promptInput').focus();
+  });
+  renderHistory();
 })();
 </script>
 </body>
