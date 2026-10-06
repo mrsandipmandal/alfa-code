@@ -135,7 +135,7 @@
 
     <!-- LEFT SIDEBAR -->
     <aside class="relative z-10 w-64 md:w-[268px] flex-shrink-0 flex flex-col border-r border-[#1a1b24] bg-[#0c0d12]/95 backdrop-blur-md">
-
+      
       <!-- Sidebar Header (Logo + Brand + Search/Toggle) -->
       <div class="px-5 pt-5 pb-3 flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
@@ -203,7 +203,7 @@
 
       <!-- Chat History Lists (Scrollable Area) -->
       <div class="flex-1 overflow-y-auto px-4 py-2 space-y-4 text-[11px] font-normal tracking-wide">
-
+        
         <!-- PINNED SECTION -->
         <div>
           <div class="flex items-center text-[10px] font-semibold text-[#575a68] uppercase tracking-wider mb-1.5">
@@ -360,9 +360,9 @@
       <div class="px-4 py-3 border-t border-[#1a1b24] flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
           <div class="w-7 h-7 rounded-full overflow-hidden border border-[#2a2d3c] bg-zinc-800 flex items-center justify-center text-xs">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Venkat"
+            <img 
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" 
+              alt="Venkat" 
               class="w-full h-full object-cover"
               onerror="this.src='https://placehold.co/40x40/222/999?text=V'"
             />
@@ -379,22 +379,22 @@
 
     <!-- MAIN INTERFACE -->
     <main class="relative z-10 flex-1 flex flex-col justify-between p-6 md:p-9 overflow-y-auto">
-
+      
       <!-- Top Spacer / Optional Nav Bar filler -->
       <div class="w-full flex justify-end"></div>
 
       <!-- Center Content Area: Orb + Header + Suggestion Cards -->
       <div class="w-full max-w-[840px] mx-auto flex flex-col items-center justify-center my-auto pt-2">
-
+        
         <!-- Glowing Floating 3D Echo Orb Logo -->
         <div class="relative mb-5 flex items-center justify-center">
           <div class="orb-glow"></div>
-
+          
           <div class="relative w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-indigo-400 shadow-[0_0_35px_rgba(168,85,247,0.55)] animate-float flex items-center justify-center">
             <div class="w-full h-full rounded-full bg-[#111219] flex items-center justify-center relative overflow-hidden shadow-inner">
               <!-- Orb ring highlight -->
               <div class="absolute inset-0 rounded-full border border-purple-300/40 transform -rotate-45 scale-90"></div>
-
+              
               <!-- Core Glowing Icon -->
               <svg class="w-7 h-7 text-purple-200 drop-shadow-[0_0_8px_rgba(216,180,254,0.9)]" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.8" stroke-dasharray="28" stroke-dashoffset="6"/>
@@ -414,7 +414,7 @@
 
         <!-- Suggestion Prompt Cards Grid -->
         <div class="w-full grid grid-cols-1 md:grid-cols-3 gap-3.5">
-
+          
           <!-- Card 1 -->
           <div onclick="selectPrompt('Write a todo list for my day')" class="suggestion-card rounded-2xl p-4 cursor-pointer flex flex-col justify-between min-h-[96px] group">
             <p class="text-xs font-normal text-[#9ca1b5] leading-relaxed group-hover:text-white transition-colors">
@@ -464,7 +464,7 @@
       <!-- Bottom Chat Bar Area -->
       <div class="w-full max-w-[840px] mx-auto mt-6">
         <div class="glowing-input-box rounded-2xl bg-[#14151e]/85 backdrop-blur-xl p-3.5 flex flex-col space-y-3">
-
+          
           <!-- Input Field with sparkle icon -->
           <div class="flex items-center space-x-2.5 px-1">
             <button class="text-[#7d8194] hover:text-purple-400 transition-colors">
@@ -472,17 +472,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/>
               </svg>
             </button>
-            <input
+            <input 
               id="promptInput"
-              type="text"
-              placeholder="Ask AI anything or write your request..."
+              type="text" 
+              placeholder="Ask AI anything or write your request..." 
               class="w-full bg-transparent text-xs sm:text-sm text-[#e6e8ee] placeholder-[#575a6c] focus:outline-none"
             />
           </div>
 
           <!-- Bottom Action Buttons Toolbar -->
           <div class="flex items-center justify-between pt-1">
-
+            
             <!-- Left Tool Icons -->
             <div class="flex items-center space-x-2 text-[#717586]">
               <button title="Conversations" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
@@ -506,7 +506,7 @@
 
             <!-- Right Controls: Model Pill, Attach, Mic, Voice Wave Button -->
             <div class="flex items-center space-x-2">
-
+              
               <!-- Model Switcher Dropdown Button -->
               <div class="relative inline-block text-left" id="modelDropdownContainer">
                 <button id="modelSelectBtn" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#1b1c26] border border-[#2b2d3e] text-xs font-medium text-white/90 hover:border-purple-500/40 transition-colors">
@@ -577,7 +577,7 @@
       const input = document.getElementById('promptInput');
       input.value = promptText;
       input.focus();
-
+      
       // Visual feedback pulse
       input.parentElement.parentElement.classList.add('ring-2', 'ring-purple-500/50');
       setTimeout(() => {
@@ -613,7 +613,7 @@
       if (e.key === 'Enter' && promptInput.value.trim() !== '') {
         const userQuery = promptInput.value.trim();
         promptInput.value = '';
-
+        
         // Show gentle interaction state
         const placeholderBackup = promptInput.placeholder;
         promptInput.placeholder = 'Thinking with ' + modelLabel.textContent + '...';
