@@ -110,6 +110,9 @@ Corrected English:
   Implemented: mini-data (30 rows) + BPE tokenizer + torch-only manual train (accelerate নেই বলে Trainer নয়), 30 steps loss falling → `/tmp/alfa-real-ckpt`;
   server + API verify: `{"mode":"real"}` ✅। User-এর জন্য: Hub ckpt download বা full train করলে UI auto real হবে।
 - [2026-10-05] Toolbar simplify ("Attach file button থাকবে, বাকি লাগছে না") — `alfa.html` থেকে chat/image/music/mic buttons removed, শুধু paperclip (সব file type); design file untouched।
+- [2026-10-05] Quality fix both ("bhul val kaj korche to! ki koronio?" → দুটোই) — approved ("apply")।
+  Implemented (Part B): backend temp 0.6 default + repetition_penalty 1.15 + question-style prompt nudge; Gradio temp slider; infer/server defaults aligned। Verified।
+  Part A (Colab retrain): `multimodal_mix --max-rows 4000 --overwrite` + tokenizer + `train_hf.py --epochs 3` (~1-2h T4), Hub upload, infer sample check।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
