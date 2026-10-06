@@ -102,6 +102,10 @@ Corrected English:
 - [2026-10-05] Exact-file fix ("puro eki royehache... kichu change korbi na") — আমার transcription ভুল ছিল; আসল file থেকে byte-identical copy (md5 match)।
   Implemented: `alfa-design.html` = Downloads file হুবহু (কোনো change নয়); `alfa.html` = একই design + appended wiring script only (Enter-capture submit, wave-button submit, attach, model→tokens, history, result box)।
   Verified: design diff empty; `/design` + `/` 200 with correct markers।
+- [2026-10-05] Working page behaviors ("kay kintu eita to kaj korche na...") — `/design` static showcase, কাজ করে `/` (working app)।
+  Implemented in `alfa.html` only (`alfa-design.html` untouched, still byte-identical): model pill + dropdown = tiny-50M/tiny-50M-long (256/512 tokens);
+  wave button = send; paperclip = file attach + image tool = image attach; TODAY panel = live history, click → full communication in main area;
+  mic + music buttons removed (no backend)। Verified served + API।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
