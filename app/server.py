@@ -5,7 +5,8 @@ Env: ALFA_MODEL / ALFA_TOKENIZER (see app/model_backend.py),
      ALFA_PORT (default 8000).
 
 Endpoints:
-  GET  /            dashboard page (app/static/alfa.html)
+  GET  /            working app page (app/static/alfa.html)
+  GET  /design      design showcase page (app/static/alfa-design.html)
   GET  /api/status  {mode, device, reason} for the engine badge
   POST /api/generate JSON {prompt, max_tokens?, temperature?}
        or multipart form (prompt, max_tokens, file)
@@ -31,6 +32,11 @@ app = FastAPI(title="Alfa-Code")
 @app.get("/")
 def index():
     return FileResponse(str(STATIC))
+
+
+@app.get("/design")
+def design():
+    return FileResponse(str(STATIC.parent / "alfa-design.html"))
 
 
 @app.get("/api/status")
