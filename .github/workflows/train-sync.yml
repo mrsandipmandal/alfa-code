@@ -17,6 +17,7 @@ on:
           - code_instruct
           - image_to_code
           - video_to_code
+          - chat_qa
       max_rows:
         description: "Rows to sample (keep small on CPU runners)"
         default: "300"

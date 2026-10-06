@@ -31,6 +31,13 @@ Output: `data/processed/train.jsonl` {modality,prompt,think,answer}
 `pip install torch --index-url https://download.pytorch.org/whl/cu121`
 `python scripts/train.py` -> `outputs/tiny-50M`
 
+Scale-up (Colab T4, ~2-4h): 5000+ rows, chat tuning, 3-5 epochs:
+`python scripts/download_data.py --dataset multimodal_mix --max-rows 5000 --overwrite`
+`python scripts/download_data.py --dataset chat_qa --max-rows 2000` (appends Q&A rows)
+`python scripts/train_hf.py --data data/processed/train.jsonl --out /content/outputs/tiny-50M --epochs 3 --config configs/tiny-50M.yaml --max-seq-len 2048 --batch-size 1`
+
+1B model (16GB+ GPU only, not RTX 3050 4GB): same commands with `--config configs/base-1B.yaml --out /content/outputs/base-1B` (1.12B params, ~2.2GB fp16).
+
 ## 3. GGUF (no llama.cpp clone needed)
 `pip install gguf safetensors torch transformers`
 `python scripts/convert_to_gguf.py --ckpt outputs/tiny-50M --quant Q8_0` (Q8_0 ~55MB, Q4_0 ~32MB, F16 ~105MB)

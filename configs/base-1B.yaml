@@ -1,0 +1,39 @@
+# Alfa 1B config - needs 16GB+ GPU (Colab T4). NOT for RTX 3050 4GB.
+# ~1.1B params: d=2048, L=22, H=32, KV=8, FFN=5632.
+# VRAM guide (fp16 + grad checkpoint): seq 2048 bs1 ~= 10-12GB; seq 4096 bs1 ~= 14GB+.
+# If OOM: lower max_seq_len to 2048 and raise grad_accum.
+model:
+  arch: llama
+  hidden_size: 2048
+  num_layers: 22
+  num_heads: 32
+  num_kv_heads: 8
+  intermediate_size: 5632
+  vocab_size: 32000
+  max_seq_len: 4096
+  rope_theta: 500000.0
+tokenizer:
+  type: bpe
+  vocab_size: 32000
+  train_files: data/processed/train.jsonl
+multimodal:
+  vision_encoder: openai/clip-vit-base-patch32
+  projector_hidden: 2048
+  image_tokens: 256        # <image> placeholder count per image
+  video_frames: 4          # <video> placeholders per clip
+  video_tokens_per_frame: 64
+context:
+  max_seq_len: 4096       # must match model.max_seq_len
+  max_prompt_chars: 12000  # ~3k tokens, fits 4k ctx with answer budget
+  max_answer_chars: 12000
+  truncation: right        # right | left (keep tail for code completion)
+  gradient_checkpointing: true
+training:
+  batch_size: 1
+  grad_accum: 16
+  lr: 2e-4
+  epochs: 3
+  output_dir: outputs/base-1B
+gguf:
+  quant: Q8_0
+  out_file: outputs/base-1B.gguf

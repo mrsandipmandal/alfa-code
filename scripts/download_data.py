@@ -17,7 +17,11 @@ Datasets (all public, Colab T4 friendly; each has fallbacks in SOURCES):
   reasoning       : Open-Orca/OpenOrca
   image_to_code   : HuggingFaceM4/websight         (screenshot -> html)
   video_to_code   : AlexZigma/msr-vtt (-> friedrichor/MSR-VTT train_7k fallback)
+  chat_qa         : HuggingFaceH4/ultrachat_200k (-> tatsu-lab/alpaca fallback, chat/instruction tuning)
   multimodal_mix  : code_long + image_to_code + video_to_code sampled together
+  TIP: append chat rows to the same train.jsonl for instruction tuning:
+    python scripts/download_data.py --dataset multimodal_mix --max-rows 3000 --overwrite
+    python scripts/download_data.py --dataset chat_qa --max-rows 2000   # appends
 
 High context: default keeps up to ~24k chars prompt + 24k answer
 (~8k tokens each). Tune with --max-prompt-chars / --max-answer-chars.
@@ -48,6 +52,8 @@ MAP = {
     "image_to_code": ("HuggingFaceM4/websight", None, None),
     # video -> code/caption (clip metadata + captions)
     "video_to_code": ("AlexZigma/msr-vtt", None, None),
+    # chat Q&A — instruction tuning (public, streams well)
+    "chat_qa": ("HuggingFaceH4/ultrachat_200k", None, None),
     # combo sampler (handled specially, not a single HF id)
     "multimodal_mix": (None, None, None),
 }
@@ -76,6 +82,10 @@ SOURCES = {
     "video_to_code": [
         ("AlexZigma/msr-vtt", None, None),
         ("friedrichor/MSR-VTT", "train_7k", None),
+    ],
+    "chat_qa": [
+        ("HuggingFaceH4/ultrachat_200k", None, None),
+        ("tatsu-lab/alpaca", None, None),
     ],
 }
 
@@ -266,6 +276,26 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
                 rows_out.append(normalize_image_row(
                     instr, str(html), img_ref, ds_id,
                     max_prompt, max_answer, image_tokens))
+            elif name == "chat_qa":
+                # ultrachat: {messages: [{role, content}...]} (multi-turn)
+                # alpaca fallback: {instruction, input, output}
+                msgs = r.get("messages")
+                if isinstance(msgs, list) and msgs:
+                    users = [m.get("content", "") for m in msgs
+                             if isinstance(m, dict) and m.get("role") == "user"][:2]
+                    assts = [m.get("content", "") for m in msgs
+                             if isinstance(m, dict) and m.get("role") == "assistant"][:2]
+                    prompt = "\n".join(users) or str(r)[:max_prompt]
+                    answer = "\n".join(assts)
+                else:
+                    instr = (r.get("instruction") or r.get("prompt") or "")
+                    if r.get("input"):
+                        instr += "\n" + r.get("input")
+                    prompt, answer = instr, (r.get("output") or r.get("response") or "")
+                obj = normalize_code_row(prompt, answer, ds_id, max_prompt, max_answer)
+                obj["modality"] = "chat"
+                obj["think"] = ""
+                rows_out.append(obj)
             elif name == "video_to_code":
                 # MSR-VTT style: {caption, video_id/url/clip}
                 caption = _caption(r)
