@@ -123,6 +123,8 @@ Corrected English:
 - [2026-10-05] OOM fix (Colab `torch.OutOfMemoryError` at first optimizer step on 1B/T4) — root cause: 1.1B Adam fp32 states (~9GB) + weights/grads exceed T4.
   Implemented: `--optim adamw_8bit` (halves optimizer VRAM) in both train scripts + `optim: adamw_8bit` in base-1B.yaml; `--grad-accum` override; OOM catch with 4-step fix hints; bitsandbytes in notebook pip cell।
   Verified: argparse flags, config load both yamls, OptimizerNames valid, notebooks valid। Colab: restart runtime first (old processes hold VRAM), then scale-up cell rerun।
+- [2026-10-05] Upload/UI model auto-detect ("tiny-50M kano ami to 1B nicchi to?") — upload cell শুধু tiny-50M জানত।
+  Implemented: upload cell এখন tiny-50M + base-1B দুটোই detect করে upload করে (যেটা train হয়েছে); UI cell base-1B থাকলে সেটা, নইলে tiny-50M serve করে। দুটো notebook-এই, syntax verified।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
