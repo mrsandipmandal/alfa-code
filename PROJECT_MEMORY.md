@@ -92,6 +92,10 @@ Corrected English:
 - [2026-10-05] HTML design implement (pasted echo_ai HTML) — approved (build mode)।
   Implemented: `app/static/alfa.html` (Echo design pixel-kept, Alfa branding, code suggestions, tiny-50M pill, no external avatar) + `app/server.py` (GET /, GET /api/status, POST /api/generate JSON+multipart)।
   Verified live: status/mock/generate/page-200 + real-ckpt multipart with file context — all OK। Run: `python app/server.py` → :8000।
+- [2026-10-05] Attached HTML implement ("impliment attached html... alfa-design.html... 2nd page alfa.html") — user explicitly asked in build mode।
+  Implemented: `app/static/alfa-design.html` (attached Echo design, Alfa branding, Lucide icons, sidebar toggle, pinned/history, model dropdown, mic/wave) +
+  `app/static/alfa.html` (same design + backend wiring: fetch generate, history, engine badge, upload); server routes `/` + `/design`।
+  Verified: both 200, Alfa strings present, zero Echo/Venkat/Elon/Sonnet leftovers।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
