@@ -196,6 +196,7 @@ def main():
         print(" 2. Lower memory: --batch-size 1 --grad-accum 16 --max-seq-len 1024", flush=True)
         print(" 3. For 1B on T4: --optim adamw_8bit  (pip install bitsandbytes)", flush=True)
         print(" 4. Still OOM: train tiny-50M instead of 1B on free T4.", flush=True)
+        print(" 5. Fragmentation: PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True", flush=True)
         raise SystemExit(3)
     model.save_pretrained(cfg["output_dir"])
     print(f"saved -> {cfg['output_dir']}")

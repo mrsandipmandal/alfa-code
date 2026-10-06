@@ -41,19 +41,20 @@ from pathlib import Path
 from datasets import load_dataset
 
 MAP = {
+    # (dataset_id, subset, split) — split matters (e.g. ultrachat uses train_sft)
     # coding — short instruct (public, no login needed)
-    "code_small_test": ("HuggingFaceH4/CodeAlpaca_20K", None, None),
+    "code_small_test": ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
     # coding — long files, high context (public, streams well)
-    "code_long": ("iamtarun/python_code_instructions_18k_alpaca", None, None),
+    "code_long": ("iamtarun/python_code_instructions_18k_alpaca", None, "train"),
     # coding — instruct mix
-    "code_instruct": ("bigcode/self-oss-instruct", None, None),
-    "reasoning": ("Open-Orca/OpenOrca", None, None),
+    "code_instruct": ("bigcode/self-oss-instruct", None, "train"),
+    "reasoning": ("Open-Orca/OpenOrca", None, "train"),
     # image -> code (screenshot + html)
-    "image_to_code": ("HuggingFaceM4/websight", None, None),
+    "image_to_code": ("HuggingFaceM4/websight", None, "train"),
     # video -> code/caption (clip metadata + captions)
-    "video_to_code": ("AlexZigma/msr-vtt", None, None),
+    "video_to_code": ("AlexZigma/msr-vtt", None, "train"),
     # chat Q&A — instruction tuning (public, streams well)
-    "chat_qa": ("HuggingFaceH4/ultrachat_200k", None, None),
+    "chat_qa": ("HuggingFaceH4/ultrachat_200k", None, "train_sft"),
     # combo sampler (handled specially, not a single HF id)
     "multimodal_mix": (None, None, None),
 }
@@ -61,31 +62,32 @@ MAP = {
 # Fallback sources tried in order when the primary MAP entry is
 # gated / renamed / unreachable (e.g. bigcode/the-stack-smol is gated,
 # microsoft/MSR-VTT does not exist). First success wins.
+# Tuple: (dataset_id, subset, split).
 SOURCES = {
     "code_long": [
-        ("iamtarun/python_code_instructions_18k_alpaca", None, None),
-        ("HuggingFaceH4/CodeAlpaca_20K", None, None),
+        ("iamtarun/python_code_instructions_18k_alpaca", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
     ],
     "code_small_test": [
-        ("HuggingFaceH4/CodeAlpaca_20K", None, None),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
     ],
     "code_instruct": [
-        ("bigcode/self-oss-instruct", None, None),
-        ("HuggingFaceH4/CodeAlpaca_20K", None, None),
+        ("bigcode/self-oss-instruct", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
     ],
     "reasoning": [
-        ("Open-Orca/OpenOrca", None, None),
+        ("Open-Orca/OpenOrca", None, "train"),
     ],
     "image_to_code": [
-        ("HuggingFaceM4/websight", None, None),
+        ("HuggingFaceM4/websight", None, "train"),
     ],
     "video_to_code": [
-        ("AlexZigma/msr-vtt", None, None),
-        ("friedrichor/MSR-VTT", "train_7k", None),
+        ("AlexZigma/msr-vtt", None, "train"),
+        ("friedrichor/MSR-VTT", "train_7k", "train"),
     ],
     "chat_qa": [
-        ("HuggingFaceH4/ultrachat_200k", None, None),
-        ("tatsu-lab/alpaca", None, None),
+        ("HuggingFaceH4/ultrachat_200k", None, "train_sft"),
+        ("tatsu-lab/alpaca", None, "train"),
     ],
 }
 
@@ -153,13 +155,13 @@ def normalize_video_row(caption: str, video_ref: str, source: str,
     }
 
 
-def _load_rows(ds_id, subset, max_rows, streaming, seed=42):
+def _load_rows(ds_id, subset, max_rows, streaming, seed=42, split="train"):
     # codeparrot datasets still use a loading script -> needs explicit trust
     trust = ds_id.startswith("codeparrot/")
     if trust:
         print(f"note: trusting remote code for {ds_id} (loading script)")
-    print(f"Loading {ds_id} (subset={subset}, streaming={streaming}) ...")
-    ds = load_dataset(ds_id, subset, split="train", streaming=streaming,
+    print(f"Loading {ds_id} (subset={subset}, split={split}, streaming={streaming}) ...")
+    ds = load_dataset(ds_id, subset, split=split, streaming=streaming,
                       trust_remote_code=trust)
     if streaming:
         it = iter(ds)
@@ -178,10 +180,10 @@ def _load_rows(ds_id, subset, max_rows, streaming, seed=42):
 def _load_rows_first(name, max_rows, streaming, seed=42):
     """Try each candidate source in SOURCES[name]; first success wins."""
     last_err = None
-    for ds_id, subset, _ in SOURCES.get(name, [MAP[name]]):
+    for ds_id, subset, split in SOURCES.get(name, [MAP[name]]):
         try:
-            rows = _load_rows(ds_id, subset, max_rows, streaming, seed)
-            print(f"using source {ds_id} (subset={subset}) -> {len(rows)} raw rows")
+            rows = _load_rows(ds_id, subset, max_rows, streaming, seed, split)
+            print(f"using source {ds_id} (subset={subset}, split={split}) -> {len(rows)} raw rows")
             return rows, ds_id
         except Exception as e:
             print(f"[warn] {name} source {ds_id} failed ({type(e).__name__}: {e}), trying next")

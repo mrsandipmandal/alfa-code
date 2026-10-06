@@ -17,6 +17,9 @@ except ImportError:
     # script mode: `python app/ui.py` (script dir on sys.path)
     from model_backend import generate, get_backend
 
+# Gradio 6 moved Blocks css to launch(); older versions still take it in Blocks.
+_GRADIO_MAJOR = int(str(getattr(gr, "__version__", "5.0")).split(".")[0])
+
 
 CSS = """
 .alfa-app { background: #08080a !important; }
@@ -134,7 +137,9 @@ TEMPLATES = {
 }
 
 
-with gr.Blocks(title="AI Workspace", css=CSS, elem_classes="alfa-app") as demo:
+with gr.Blocks(title="AI Workspace",
+               **({} if _GRADIO_MAJOR >= 6 else {"css": CSS}),
+               elem_classes="alfa-app") as demo:
     with gr.Row(elem_classes="alfa-frame"):
         # ---------- sidebar ----------
         with gr.Column(scale=1, elem_classes="alfa-side"):
@@ -197,4 +202,10 @@ with gr.Blocks(title="AI Workspace", css=CSS, elem_classes="alfa-app") as demo:
 if __name__ == "__main__":
     demo.launch(server_name="127.0.0.1",
                 server_port=int(os.getenv("ALFA_PORT", "7860")),
-                share=os.getenv("ALFA_SHARE", "0") == "1")
+                share=os.getenv("ALFA_SHARE", "0") == "1",
+                **({"css": CSS} if _GRADIO_MAJOR >= 6 else {}))
+
+
+def launch_share():
+    """Colab entry: public link with version-correct css handling."""
+    demo.launch(share=True, **({"css": CSS} if _GRADIO_MAJOR >= 6 else {}))
