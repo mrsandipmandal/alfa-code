@@ -113,6 +113,10 @@ Corrected English:
 - [2026-10-05] Quality fix both ("bhul val kaj korche to! ki koronio?" → দুটোই) — approved ("apply")।
   Implemented (Part B): backend temp 0.6 default + repetition_penalty 1.15 + question-style prompt nudge; Gradio temp slider; infer/server defaults aligned। Verified।
   Part A (Colab retrain): `multimodal_mix --max-rows 4000 --overwrite` + tokenizer + `train_hf.py --epochs 3` (~1-2h T4), Hub upload, infer sample check।
+- [2026-10-05] Scale-up trio (user list: 5000+ rows/3-5 epochs + chat Q&A + 1B) — approved (build mode)।
+  Implemented: `chat_qa` source (ultrachat_200k → alpaca fallback, modality=chat, multi-turn aware) + append recipe; `configs/base-1B.yaml` (d2048/L22/H32/KV8/FFN5632, seq4096, verified builds to 1.12B/2.2GB fp16);
+  notebook scale-up cell (5000 mix + 2000 chat + 1B train) in both notebooks; workflow choice + README।
+  Verified: chat handler both shapes, notebooks valid, workflow YAML OK। Note: 1B needs 16GB+ GPU; CI stays smoke-size।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
