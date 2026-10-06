@@ -53,6 +53,7 @@ def load_cfg(path: str | None) -> dict:
         "lr": float(t.get("lr", 3e-4)),
         "epochs": int(t.get("epochs", 1)),
         "output_dir": t.get("output_dir", "outputs/tiny-50M"),
+        "optim": t.get("optim", "adamw_torch"),
     }
 
 
@@ -119,6 +120,9 @@ def main():
     ap.add_argument("--out", default=None)
     ap.add_argument("--tokenizer", default="tokenizers/alfa-32k.json",
                     help="BPE tokenizer file (missing -> char-level fallback)")
+    ap.add_argument("--grad-accum", type=int, default=None)
+    ap.add_argument("--optim", default=None,
+                    help="adamw_torch (default) or adamw_8bit (needs bitsandbytes)")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
@@ -130,9 +134,19 @@ def main():
         cfg["epochs"] = args.epochs
     if args.out:
         cfg["output_dir"] = args.out
+    if args.grad_accum:
+        cfg["grad_accum"] = args.grad_accum
+    if args.optim:
+        cfg["optim"] = args.optim
+    if cfg.get("optim", "adamw_torch") == "adamw_8bit":
+        try:
+            import bitsandbytes  # noqa: F401
+        except ImportError:
+            raise SystemExit("adamw_8bit needs bitsandbytes: run  pip install bitsandbytes")
 
     print(f"config: seq_len={cfg['max_seq_len']} rope_theta={cfg['rope_theta']} "
-          f"bs={cfg['batch_size']} accum={cfg['grad_accum']} ckpt={cfg['grad_ckpt']}")
+          f"bs={cfg['batch_size']} accum={cfg['grad_accum']} ckpt={cfg['grad_ckpt']} "
+          f"optim={cfg.get('optim', 'adamw_torch')}")
     cuda = torch.cuda.is_available()
     print(f"torch={torch.__version__} cuda={cuda}", flush=True)
     if cuda:
@@ -169,9 +183,20 @@ def main():
         logging_steps=5, save_steps=50,
         fp16=torch.cuda.is_available(),
         gradient_checkpointing=cfg["grad_ckpt"],
+        optim=cfg.get("optim", "adamw_torch"),
         report_to="none",
     )
-    Trainer(model=model, args=targs, train_dataset=ds).train()
+    try:
+        Trainer(model=model, args=targs, train_dataset=ds).train()
+    except torch.cuda.OutOfMemoryError:
+        import traceback
+        traceback.print_exc()
+        print("\nCUDA OUT OF MEMORY — cheapest fix first:", flush=True)
+        print(" 1. Restart the Colab runtime (old processes may hold VRAM), then rerun.", flush=True)
+        print(" 2. Lower memory: --batch-size 1 --grad-accum 16 --max-seq-len 1024", flush=True)
+        print(" 3. For 1B on T4: --optim adamw_8bit  (pip install bitsandbytes)", flush=True)
+        print(" 4. Still OOM: train tiny-50M instead of 1B on free T4.", flush=True)
+        raise SystemExit(3)
     model.save_pretrained(cfg["output_dir"])
     print(f"saved -> {cfg['output_dir']}")
 

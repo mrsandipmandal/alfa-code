@@ -33,6 +33,7 @@ training:
   grad_accum: 16
   lr: 2e-4
   epochs: 3
+  optim: adamw_8bit   # halves optimizer VRAM; needs `pip install bitsandbytes`
   output_dir: outputs/base-1B
 gguf:
   quant: Q8_0

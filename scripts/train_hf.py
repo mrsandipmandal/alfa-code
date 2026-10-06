@@ -23,6 +23,10 @@ def main():
     ap.add_argument("--batch-size", type=int, default=None)
     ap.add_argument("--tokenizer", default=os.getenv("ALFA_TOKENIZER", "tokenizers/alfa-32k.json"),
                     help="BPE tokenizer file (missing -> char-level fallback)")
+    ap.add_argument("--grad-accum", type=int, default=None,
+                    help="override config gradient accumulation (higher = less VRAM per step)")
+    ap.add_argument("--optim", default=None,
+                    help="optimizer: adamw_torch (default) or adamw_8bit (half optimizer VRAM, needs bitsandbytes)")
     args = ap.parse_args()
 
     import yaml
@@ -44,6 +48,15 @@ def main():
     grad_ckpt = bool(ctx.get("gradient_checkpointing", True))
     truncation = ctx.get("truncation", "right")
     video_frames = int(mm.get("video_frames", 4))
+    if args.grad_accum:
+        accum = args.grad_accum
+    optim = args.optim or trn.get("optim", "adamw_torch")
+    if optim == "adamw_8bit":
+        try:
+            import bitsandbytes  # noqa: F401
+        except ImportError:
+            raise SystemExit("adamw_8bit needs bitsandbytes: run  pip install bitsandbytes")
+    print(f"optim={optim} (8-bit halves optimizer VRAM; use it for 1B on T4)")
 
     print(f"config: seq_len={seq_len} rope={rope_theta} bs={bs} accum={accum} ckpt={grad_ckpt}")
 
@@ -108,9 +121,19 @@ def main():
         num_train_epochs=args.epochs, learning_rate=lr,
         logging_steps=2, save_steps=50, save_total_limit=1,
         fp16=torch.cuda.is_available(), report_to="none",
-        gradient_checkpointing=grad_ckpt,
+        gradient_checkpointing=grad_ckpt, optim=optim,
     )
-    Trainer(model=model, args=targs, train_dataset=ds).train()
+    try:
+        Trainer(model=model, args=targs, train_dataset=ds).train()
+    except torch.cuda.OutOfMemoryError:
+        import traceback
+        traceback.print_exc()
+        print("\nCUDA OUT OF MEMORY — fix, cheapest first:", flush=True)
+        print(" 1. Restart the Colab runtime (old processes may hold VRAM), then rerun.", flush=True)
+        print(" 2. Lower memory: --batch-size 1 --grad-accum 16 --max-seq-len 1024", flush=True)
+        print(" 3. For 1B on T4: --optim adamw_8bit  (pip install bitsandbytes)", flush=True)
+        print(" 4. Still OOM: train tiny-50M instead of 1B on free T4.", flush=True)
+        raise SystemExit(3)
     model.save_pretrained(args.out)
     print(f"saved -> {args.out}")
 
