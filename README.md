@@ -15,7 +15,7 @@ datasets:
 metrics:
 - code_eval
 - perplexity
-version: 0.1.0-tiny-50M
+version: 0.0.1
 ---
 
 # Alfa Code - Multimodal Coding GGUF

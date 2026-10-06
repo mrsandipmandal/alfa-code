@@ -117,6 +117,9 @@ Corrected English:
   Implemented: `chat_qa` source (ultrachat_200k → alpaca fallback, modality=chat, multi-turn aware) + append recipe; `configs/base-1B.yaml` (d2048/L22/H32/KV8/FFN5632, seq4096, verified builds to 1.12B/2.2GB fp16);
   notebook scale-up cell (5000 mix + 2000 chat + 1B train) in both notebooks; workflow choice + README।
   Verified: chat handler both shapes, notebooks valid, workflow YAML OK। Note: 1B needs 16GB+ GPU; CI stays smoke-size।
+- [2026-10-05] Tiny-50M release ("Tiny-50M er ekta release dau... version 0.0.1...") — approved (build mode)।
+  Implemented: tag v0.0.1 + GitHub release (Q8_0 59.5MB + Q4_0 31.5MB + demo tokenizer from local smoke ckpt, honestly labeled preview);
+  README version → 0.0.1। Version scheme: 0.0.x tiny fixes, 1B next as v0.1.0।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
