@@ -92,6 +92,10 @@ Corrected English:
 - [2026-10-05] HTML design implement (pasted echo_ai HTML) — approved (build mode)।
   Implemented: `app/static/alfa.html` (Echo design pixel-kept, Alfa branding, code suggestions, tiny-50M pill, no external avatar) + `app/server.py` (GET /, GET /api/status, POST /api/generate JSON+multipart)।
   Verified live: status/mock/generate/page-200 + real-ckpt multipart with file context — all OK। Run: `python app/server.py` → :8000।
+- [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
+  Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
+  Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
+  Caught mid-way: writer doesn't quantize (mislabeled F32) + Q4_K block mismatch — both fixed before commit। README + requirements updated।
 - [2026-10-05] Echo pixel-theme ("valo kore pixel wise dakh... without name and icons") — approved (build mode)।
   Implemented: `app/ui.py` rewrite — near-black #08080a + purple aurora glow + 24px frame; sidebar (Alfa logo, New Chat, Chat/Code/Images/Videos nav, TODAY history, Pro card, User row);
   center orb (pure CSS gradient) + Welcome + big headline + 3 suggestion cards + glowing prompt bar + uploads + Deep Think + History;
