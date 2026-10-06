@@ -99,6 +99,9 @@ Corrected English:
 - [2026-10-05] Design as-is fix ("you done 1st... 2nd alfa-design.html not same") — attached HTML হুবহু বসানো হলো, কোনো rebranding নয়।
   Implemented: `app/static/alfa-design.html` = attached file exactly (Echo/Venkat/Elon/3.5 Sonnet/PINNED/YESTERDAY/wave সহ); `/design` serve verified।
   Note: `alfa.html` (working Alfa app) আলাদা রইল — `/` route অপরিবর্তিত।
+- [2026-10-05] Exact-file fix ("puro eki royehache... kichu change korbi na") — আমার transcription ভুল ছিল; আসল file থেকে byte-identical copy (md5 match)।
+  Implemented: `alfa-design.html` = Downloads file হুবহু (কোনো change নয়); `alfa.html` = একই design + appended wiring script only (Enter-capture submit, wave-button submit, attach, model→tokens, history, result box)।
+  Verified: design diff empty; `/design` + `/` 200 with correct markers।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
   Implemented: `scripts/convert_to_gguf.py` self-contained (gguf-py, GQA map, BPE→gpt2 tokenizer, F16/Q8_0/Q4_0; K-quants invalid for 1376-dim — dropped with reason)।
   Verified end-to-end: 3 quants convert + sizes differ correctly + read-back (llama/21 tensors/tokens/GQA shape) + Q8 dequant err 0.00009।
