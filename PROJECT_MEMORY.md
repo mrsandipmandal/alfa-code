@@ -123,6 +123,9 @@ Corrected English:
 - [2026-10-05] OOM fix (Colab `torch.OutOfMemoryError` at first optimizer step on 1B/T4) — root cause: 1.1B Adam fp32 states (~9GB) + weights/grads exceed T4.
   Implemented: `--optim adamw_8bit` (halves optimizer VRAM) in both train scripts + `optim: adamw_8bit` in base-1B.yaml; `--grad-accum` override; OOM catch with 4-step fix hints; bitsandbytes in notebook pip cell।
   Verified: argparse flags, config load both yamls, OptimizerNames valid, notebooks valid। Colab: restart runtime first (old processes hold VRAM), then scale-up cell rerun।
+- [2026-10-05] 1B OOM in SDPA (log: ultrachat wrong split + OOM at 2% + gradio6 css warning) — 3 fixes, all verified।
+  Implemented: SOURCES split support (ultrachat→train_sft, all others explicit train); scale-up 1B cell --max-seq-len 1024 (2048 OOMs on T4) + PYTORCH alloc hint;
+  ui.py Gradio6 css compat (Blocks vs launch by version) + launch_share() used by notebook cell।
 - [2026-10-05] Upload/UI model auto-detect ("tiny-50M kano ami to 1B nicchi to?") — upload cell শুধু tiny-50M জানত।
   Implemented: upload cell এখন tiny-50M + base-1B দুটোই detect করে upload করে (যেটা train হয়েছে); UI cell base-1B থাকলে সেটা, নইলে tiny-50M serve করে। দুটো notebook-এই, syntax verified।
 - [2026-10-05] GGUF convert ("3. GGUF convert — local/RTX 3050") — approved (build mode)।
