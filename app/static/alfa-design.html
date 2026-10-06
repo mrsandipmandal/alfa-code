@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alfa-Code Dashboard</title>
+  <title>Echo AI Dashboard</title>
+  <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
@@ -29,22 +32,50 @@
     }
   </script>
   <style>
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #252836; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3b3f54; }
+    /* Custom scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #252836;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b3f54;
+    }
+
+    /* Volumetric ambient top-right purple light ray */
     .top-right-light {
-      position: absolute; top: -60px; right: -40px; width: 580px; height: 650px;
+      position: absolute;
+      top: -60px;
+      right: -40px;
+      width: 580px;
+      height: 650px;
       pointer-events: none;
       background: radial-gradient(ellipse at 85% 10%, rgba(184, 134, 255, 0.42) 0%, rgba(147, 85, 245, 0.22) 32%, rgba(103, 44, 214, 0.08) 60%, transparent 80%);
-      filter: blur(48px); transform: rotate(-16deg) scale(1.1); z-index: 1;
+      filter: blur(48px);
+      transform: rotate(-16deg) scale(1.1);
+      z-index: 1;
     }
+
+    /* Center ambient glow for Echo logo */
     .orb-glow {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 140px; height: 140px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 140px;
+      height: 140px;
       background: radial-gradient(circle, rgba(175, 110, 255, 0.35) 0%, rgba(138, 58, 240, 0.12) 55%, transparent 75%);
-      filter: blur(28px); pointer-events: none;
+      filter: blur(28px);
+      pointer-events: none;
     }
+
+    /* Neon outline border effect for input box */
     .glowing-input-box {
       border: 1px solid rgba(168, 85, 247, 0.36);
       box-shadow: 0 0 24px -4px rgba(168, 85, 247, 0.22), inset 0 0 16px -6px rgba(168, 85, 247, 0.14);
@@ -54,6 +85,8 @@
       border-color: rgba(192, 132, 252, 0.7);
       box-shadow: 0 0 32px 0px rgba(168, 85, 247, 0.36), inset 0 0 20px -4px rgba(168, 85, 247, 0.24);
     }
+
+    /* Prompt Suggestion Card subtle border and backdrop */
     .suggestion-card {
       background: rgba(22, 23, 31, 0.65);
       border: 1px solid rgba(255, 255, 255, 0.06);
@@ -66,12 +99,25 @@
       transform: translateY(-2px);
       box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.45);
     }
+
+    /* Floating gentle animation for Echo Orb */
     @keyframes floatOrb {
-      0%, 100% { transform: translateY(0px) rotate(0deg); }
-      50% { transform: translateY(-6px) rotate(3deg); }
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-6px) rotate(3deg);
+      }
     }
-    .animate-float { animation: floatOrb 5s ease-in-out infinite; }
-    @keyframes wavePulse { 0%, 100% { height: 6px; } 50% { height: 16px; } }
+    .animate-float {
+      animation: floatOrb 5s ease-in-out infinite;
+    }
+
+    /* Pulse animation for voice equalizer wave */
+    @keyframes wavePulse {
+      0%, 100% { height: 6px; }
+      50% { height: 16px; }
+    }
     .wave-bar:nth-child(1) { animation: wavePulse 1.1s ease-in-out infinite; }
     .wave-bar:nth-child(2) { animation: wavePulse 1.1s ease-in-out 0.2s infinite; }
     .wave-bar:nth-child(3) { animation: wavePulse 1.1s ease-in-out 0.4s infinite; }
@@ -80,177 +126,443 @@
 </head>
 <body class="bg-[#111217] text-[#ebecee] min-h-screen flex items-center justify-center p-2 sm:p-5 select-none antialiased overflow-hidden font-sans">
 
+  <!-- Outer Tablet/Canvas Mockup Container -->
   <div class="relative w-full max-w-[1400px] h-[92vh] max-h-[920px] bg-[#0c0d12] rounded-[34px] border-[5px] border-[#181922] shadow-[0_25px_70px_rgba(0,0,0,0.85)] flex overflow-hidden">
 
+    <!-- Ambient Volumetric Violet Ray (Top-Right) -->
     <div class="top-right-light"></div>
     <div class="absolute -top-24 right-1/4 w-96 h-96 bg-purple-900/20 blur-[100px] pointer-events-none z-0"></div>
 
     <!-- LEFT SIDEBAR -->
     <aside class="relative z-10 w-64 md:w-[268px] flex-shrink-0 flex flex-col border-r border-[#1a1b24] bg-[#0c0d12]/95 backdrop-blur-md">
 
+      <!-- Sidebar Header (Logo + Brand + Search/Toggle) -->
       <div class="px-5 pt-5 pb-3 flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
+          <!-- Echo Logo Icon -->
           <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-purple-700 via-indigo-600 to-purple-400 p-[1.5px] shadow-[0_0_12px_rgba(168,85,247,0.4)] flex items-center justify-center">
             <div class="w-full h-full bg-[#0d0e15] rounded-full flex items-center justify-center relative overflow-hidden">
               <div class="absolute inset-0 bg-gradient-to-br from-purple-500/40 via-transparent to-indigo-500/20"></div>
-              <span class="text-[13px] font-bold text-purple-300 relative">A</span>
+              <svg class="w-4 h-4 text-purple-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="7"/>
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                <path d="M5 5l2.5 2.5M16.5 16.5L19 19M19 5l-2.5 2.5M7.5 16.5L5 19"/>
+              </svg>
             </div>
           </div>
-          <span class="font-semibold text-[15px] tracking-tight text-white/95">Alfa</span>
+          <span class="font-semibold text-[15px] tracking-tight text-white/95">Echo</span>
         </div>
+
+        <!-- Search & Panel Toggle Icons -->
         <div class="flex items-center space-x-2 text-[#717585]">
           <button title="Search" class="p-1 hover:text-white transition-colors duration-150 rounded">
-            <i data-lucide="search" class="w-4 h-4"></i>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+            </svg>
           </button>
           <button id="sidebarToggleBtn" title="Toggle Panels" class="p-1 hover:text-white transition-colors duration-150 rounded">
-            <i data-lucide="panel-left" class="w-4 h-4"></i>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor"/>
+              <path d="M9 3v18" stroke="currentColor"/>
+            </svg>
           </button>
         </div>
       </div>
 
+      <!-- New Chat Button -->
       <div class="px-4 py-2">
         <button id="btnNewChat" class="w-full py-2 px-3 rounded-lg border border-[#262835] bg-[#14161f]/80 hover:bg-[#1a1c28] text-xs font-medium text-white/90 flex items-center justify-center space-x-2 transition-all duration-150 hover:border-purple-500/40 group">
-          <i data-lucide="plus" class="w-3.5 h-3.5 text-purple-400 group-hover:scale-110 transition-transform"></i>
+          <svg class="w-3.5 h-3.5 text-purple-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+          </svg>
           <span class="tracking-wide">New Chat</span>
         </button>
       </div>
 
+      <!-- Navigation Links -->
       <div class="px-4 py-1 space-y-0.5 text-xs text-[#8c909e] font-medium">
-        <a href="javascript:void(0)" onclick="setMode('code')" class="flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md hover:bg-white/[0.04] text-white/90">
-          <i data-lucide="message-circle" class="w-4 h-4 text-[#717585]"></i>
+        <a href="javascript:void(0)" class="flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md hover:bg-white/[0.04] text-white/90">
+          <svg class="w-4 h-4 text-[#717585]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
+          </svg>
           <span>Chat</span>
         </a>
-        <a href="javascript:void(0)" onclick="setMode('image')" class="flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md hover:bg-white/[0.04] text-[#8c909e] hover:text-white transition-colors">
-          <i data-lucide="image" class="w-4 h-4 text-[#717585]"></i>
-          <span>Images</span>
+        <a href="javascript:void(0)" class="flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md hover:bg-white/[0.04] text-[#8c909e] hover:text-white transition-colors">
+          <svg class="w-4 h-4 text-[#717585]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"/>
+          </svg>
+          <span>API</span>
         </a>
-        <a href="javascript:void(0)" onclick="setMode('video')" class="flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md hover:bg-white/[0.04] text-[#8c909e] hover:text-white transition-colors">
-          <i data-lucide="clapperboard" class="w-4 h-4 text-[#717585]"></i>
-          <span>Videos</span>
+        <a href="javascript:void(0)" class="flex items-center space-x-2.5 px-2.5 py-1.5 rounded-md hover:bg-white/[0.04] text-[#8c909e] hover:text-white transition-colors">
+          <svg class="w-4 h-4 text-[#717585]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.999-3.199a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/>
+          </svg>
+          <span>Community</span>
         </a>
       </div>
 
+      <!-- Chat History Lists (Scrollable Area) -->
       <div class="flex-1 overflow-y-auto px-4 py-2 space-y-4 text-[11px] font-normal tracking-wide">
+
+        <!-- PINNED SECTION -->
         <div>
           <div class="flex items-center text-[10px] font-semibold text-[#575a68] uppercase tracking-wider mb-1.5">
-            <i data-lucide="pin" class="w-3 h-3 mr-1 text-[#575a68]"></i>
+            <svg class="w-3 h-3 mr-1 text-[#575a68]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+            </svg>
             <span>Pinned</span>
           </div>
-          <ul class="space-y-1" id="pinnedList">
-            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors" onclick="selectPrompt('Write a Python function that sorts a list')">
-              <span class="truncate">Sorting function...</span>
+          <ul class="space-y-1">
+            <li class="group flex items-center justify-between py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <div class="flex items-center space-x-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full border border-[#525666] flex-shrink-0"></span>
+                <span class="truncate">Reality office brainsto...</span>
+              </div>
+              <svg class="w-3 h-3 text-[#555869] group-hover:text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M16 12V4H17V2H7V4H8V12L6 14V16H11V22H13V16H18V14L16 12Z"/>
+              </svg>
             </li>
-            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors" onclick="selectPrompt('Explain this code snippet:\n')">
-              <span class="truncate">Explain snippet...</span>
+            <li class="group flex items-center justify-between py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <div class="flex items-center space-x-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full border border-[#525666] flex-shrink-0"></span>
+                <span class="truncate">Individual hurting but...</span>
+              </div>
+              <svg class="w-3 h-3 text-[#555869] group-hover:text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M16 12V4H17V2H7V4H8V12L6 14V16H11V22H13V16H18V14L16 12Z"/>
+              </svg>
+            </li>
+            <li class="group flex items-center justify-between py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <div class="flex items-center space-x-2 truncate">
+                <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219M21 16c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219"/>
+                </svg>
+                <span class="truncate">2 whistles productize...</span>
+              </div>
+              <svg class="w-3 h-3 text-[#555869] group-hover:text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M16 12V4H17V2H7V4H8V12L6 14V16H11V22H13V16H18V14L16 12Z"/>
+              </svg>
             </li>
           </ul>
         </div>
 
+        <!-- TODAY SECTION -->
         <div>
-          <div class="text-[10px] font-semibold text-[#575a68] uppercase tracking-wider mb-1.5">
+          <button class="w-full flex items-center justify-between text-[10px] font-semibold text-[#575a68] uppercase tracking-wider mb-1.5 group">
             <span>Today</span>
-          </div>
-          <ul id="historyList" class="space-y-1"></ul>
+            <svg class="w-3 h-3 text-[#555869] group-hover:text-white transition-transform transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <ul class="space-y-1">
+            <li class="group flex items-center justify-between py-1 px-1.5 rounded bg-white/[0.03] text-white/90 cursor-pointer">
+              <div class="flex items-center space-x-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full border border-purple-400/80 flex-shrink-0"></span>
+                <span class="truncate">Solutions nor hands n...</span>
+              </div>
+              <span class="text-[#65697d] text-xs">•••</span>
+            </li>
+            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219M21 16c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219"/>
+              </svg>
+              <span class="truncate">By activities tomorrow ui...</span>
+            </li>
+            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+              <span class="truncate">Hard prioritize group strea...</span>
+            </li>
+            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <span class="w-2.5 h-2.5 rounded-full border border-[#525666] flex-shrink-0"></span>
+              <span class="truncate">Out expectations scraps c...</span>
+            </li>
+          </ul>
         </div>
 
+        <!-- YESTERDAY SECTION -->
         <div>
-          <div class="text-[10px] font-semibold text-[#575a68] uppercase tracking-wider mb-1">
+          <button class="w-full flex items-center justify-between text-[10px] font-semibold text-[#575a68] uppercase tracking-wider mb-1.5 group">
+            <span>Yesterday</span>
+            <svg class="w-3 h-3 text-[#555869] group-hover:text-white transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <ul class="space-y-1">
+            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+              <span class="truncate">Running hour cross-pollin...</span>
+            </li>
+            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <span class="w-2.5 h-2.5 rounded-full border border-[#525666] flex-shrink-0"></span>
+              <span class="truncate">Container cost unit scope..</span>
+            </li>
+            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+              <span class="truncate">This t-shaped or about ga...</span>
+            </li>
+            <li class="flex items-center space-x-2 py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors">
+              <svg class="w-3 h-3 text-[#555869] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219M21 16c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219"/>
+              </svg>
+              <span class="truncate">A ping angel boy other</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- PREVIOUS 7 DAYS -->
+        <div>
+          <button class="w-full flex items-center justify-between text-[10px] font-semibold text-[#575a68] uppercase tracking-wider mb-1 group">
             <span>Previous 7 Days</span>
-          </div>
+            <svg class="w-3 h-3 text-[#555869] group-hover:text-white transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
+            </svg>
+          </button>
         </div>
       </div>
 
+      <!-- Upgrade to Pro Card -->
       <div class="px-3.5 pb-2.5">
         <div class="p-3 rounded-xl bg-[#14151e]/80 border border-[#232535] relative overflow-hidden group">
           <div class="flex items-center space-x-2.5 mb-1.5">
-            <span id="engineDot" class="w-2 h-2 rounded-full bg-gray-500"></span>
-            <span id="engineLabel" class="text-xs font-semibold text-white/95 tracking-wide">Engine: ...</span>
+            <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-400 p-[1px] flex items-center justify-center shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+              <div class="w-full h-full bg-[#111219] rounded-full flex items-center justify-center">
+                <svg class="w-2.5 h-2.5 text-purple-300" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                </svg>
+              </div>
+            </div>
+            <span class="text-xs font-semibold text-white/95 tracking-wide">Upgrade to Pro</span>
           </div>
-          <p id="engineSub" class="text-[10px] leading-tight text-[#757989] mb-2.5">Connecting...</p>
+          <p class="text-[10px] leading-tight text-[#757989] mb-2.5">
+            Get premium features, latest models, unlimited usage and more.
+          </p>
+          <button class="w-full py-1.5 px-2.5 rounded-lg border border-[#2b2d3d] bg-[#1a1b26] hover:bg-[#202230] text-[11px] font-medium text-white/90 flex items-center justify-center space-x-1.5 transition-colors group-hover:border-purple-500/40">
+            <svg class="w-3 h-3 text-[#9a9eb2] group-hover:text-purple-300 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"/>
+            </svg>
+            <span>Upgrade to Pro</span>
+          </button>
         </div>
       </div>
 
+      <!-- User Profile Bottom Bar -->
       <div class="px-4 py-3 border-t border-[#1a1b24] flex items-center justify-between">
         <div class="flex items-center space-x-2.5">
-          <div class="w-7 h-7 rounded-full overflow-hidden border border-[#2a2d3c] bg-gradient-to-tr from-purple-700 to-indigo-500 flex items-center justify-center text-xs font-bold text-white">U</div>
-          <span class="text-xs font-medium text-white/90">User</span>
+          <div class="w-7 h-7 rounded-full overflow-hidden border border-[#2a2d3c] bg-zinc-800 flex items-center justify-center text-xs">
+            <img
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+              alt="Venkat"
+              class="w-full h-full object-cover"
+              onerror="this.src='https://placehold.co/40x40/222/999?text=V'"
+            />
+          </div>
+          <span class="text-xs font-medium text-white/90">Venkat</span>
         </div>
+        <button class="text-[#65697a] hover:text-white transition-colors">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/>
+          </svg>
+        </button>
       </div>
     </aside>
 
     <!-- MAIN INTERFACE -->
     <main class="relative z-10 flex-1 flex flex-col justify-between p-6 md:p-9 overflow-y-auto">
 
+      <!-- Top Spacer / Optional Nav Bar filler -->
       <div class="w-full flex justify-end"></div>
 
+      <!-- Center Content Area: Orb + Header + Suggestion Cards -->
       <div class="w-full max-w-[840px] mx-auto flex flex-col items-center justify-center my-auto pt-2">
 
+        <!-- Glowing Floating 3D Echo Orb Logo -->
         <div class="relative mb-5 flex items-center justify-center">
           <div class="orb-glow"></div>
+
           <div class="relative w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-indigo-400 shadow-[0_0_35px_rgba(168,85,247,0.55)] animate-float flex items-center justify-center">
             <div class="w-full h-full rounded-full bg-[#111219] flex items-center justify-center relative overflow-hidden shadow-inner">
+              <!-- Orb ring highlight -->
               <div class="absolute inset-0 rounded-full border border-purple-300/40 transform -rotate-45 scale-90"></div>
-              <span class="text-xl font-bold text-purple-200" style="text-shadow: 0 0 8px rgba(216,180,254,0.9)">A</span>
+
+              <!-- Core Glowing Icon -->
+              <svg class="w-7 h-7 text-purple-200 drop-shadow-[0_0_8px_rgba(216,180,254,0.9)]" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1.8" stroke-dasharray="28" stroke-dashoffset="6"/>
+                <path d="M12 4c4.418 0 8 3.582 8 8" stroke="#f3e8ff" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 20c-4.418 0-8-3.582-8-8" stroke="#c084fc" stroke-width="2" stroke-linecap="round"/>
+                <polygon points="12,7 13.5,10.5 17,12 13.5,13.5 12,17 10.5,13.5 7,12 10.5,10.5" fill="#f3e8ff"/>
+              </svg>
             </div>
           </div>
         </div>
 
+        <!-- Greeting Titles -->
         <div class="text-center space-y-1 mb-8">
-          <p class="text-xs md:text-sm font-medium text-[#7d8296] tracking-tight">Welcome to Alfa AI</p>
+          <p class="text-xs md:text-sm font-medium text-[#7d8296] tracking-tight">Welcome to Echo AI</p>
           <h1 class="text-2xl md:text-4xl font-semibold tracking-tight text-[#f1f2f6]">How Can I Assist You?</h1>
         </div>
 
+        <!-- Suggestion Prompt Cards Grid -->
         <div class="w-full grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          <div onclick="selectPrompt('Write a Python function that sorts a list')" class="suggestion-card rounded-2xl p-4 cursor-pointer flex flex-col justify-between min-h-[96px] group">
-            <p class="text-xs font-normal text-[#9ca1b5] leading-relaxed group-hover:text-white transition-colors">Write a Python function that sorts a list</p>
-            <div class="pt-2 text-[#5a5e72] group-hover:text-purple-400 transition-colors"><i data-lucide="code-2" class="w-4 h-4"></i></div>
-          </div>
-          <div onclick="selectPrompt('Explain this code snippet:\n')" class="suggestion-card rounded-2xl p-4 cursor-pointer flex flex-col justify-between min-h-[96px] group">
-            <p class="text-xs font-normal text-[#9ca1b5] leading-relaxed group-hover:text-white transition-colors">Explain this code snippet</p>
-            <div class="pt-2 text-[#5a5e72] group-hover:text-purple-400 transition-colors"><i data-lucide="message-circle" class="w-4 h-4"></i></div>
-          </div>
-          <div onclick="selectPrompt('Find and fix the bug in this code:\n')" class="suggestion-card rounded-2xl p-4 cursor-pointer flex flex-col justify-between min-h-[96px] group">
-            <p class="text-xs font-normal text-[#9ca1b5] leading-relaxed group-hover:text-white transition-colors">Find and fix the bug in this code</p>
-            <div class="pt-2 text-[#5a5e72] group-hover:text-purple-400 transition-colors"><i data-lucide="bug" class="w-4 h-4"></i></div>
-          </div>
-        </div>
 
-        <div id="resultArea" class="w-full mt-4 hidden rounded-2xl p-4 text-xs text-[#cfd2dd] leading-relaxed" style="background:rgba(22,23,31,0.65);border:1px solid rgba(255,255,255,0.06)"></div>
+          <!-- Card 1 -->
+          <div onclick="selectPrompt('Write a todo list for my day')" class="suggestion-card rounded-2xl p-4 cursor-pointer flex flex-col justify-between min-h-[96px] group">
+            <p class="text-xs font-normal text-[#9ca1b5] leading-relaxed group-hover:text-white transition-colors">
+              Write a todo list for my day
+            </p>
+            <div class="pt-2 text-[#5a5e72] group-hover:text-purple-400 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div onclick="selectPrompt('Generate an image of Elon hugging Xi Jinping')" class="suggestion-card rounded-2xl p-4 cursor-pointer flex flex-col justify-between min-h-[96px] group">
+            <p class="text-xs font-normal text-[#9ca1b5] leading-relaxed group-hover:text-white transition-colors">
+              Generate an image of Elon hugging Xi Jinping
+            </p>
+            <div class="pt-2 text-[#5a5e72] group-hover:text-purple-400 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div onclick="selectPrompt('Generate an image of Elon hugging Xi Jinping')" class="suggestion-card rounded-2xl p-4 cursor-pointer flex flex-col justify-between min-h-[96px] group">
+            <p class="text-xs font-normal text-[#9ca1b5] leading-relaxed group-hover:text-white transition-colors">
+              Generate an image of Elon hugging Xi Jinping
+            </p>
+            <div class="pt-2 text-[#5a5e72] group-hover:text-purple-400 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+          </div>
+
+        </div>
 
       </div>
 
+      <!-- Bottom Chat Bar Area -->
       <div class="w-full max-w-[840px] mx-auto mt-6">
         <div class="glowing-input-box rounded-2xl bg-[#14151e]/85 backdrop-blur-xl p-3.5 flex flex-col space-y-3">
 
+          <!-- Input Field with sparkle icon -->
           <div class="flex items-center space-x-2.5 px-1">
-            <input id="promptInput" type="text" placeholder="Ask AI anything or write your request..."
-              class="w-full bg-transparent text-xs sm:text-sm text-[#e6e8ee] placeholder-[#575a6c] focus:outline-none" />
+            <button class="text-[#7d8194] hover:text-purple-400 transition-colors">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/>
+              </svg>
+            </button>
+            <input
+              id="promptInput"
+              type="text"
+              placeholder="Ask AI anything or write your request..."
+              class="w-full bg-transparent text-xs sm:text-sm text-[#e6e8ee] placeholder-[#575a6c] focus:outline-none"
+            />
           </div>
 
+          <!-- Bottom Action Buttons Toolbar -->
           <div class="flex items-center justify-between pt-1">
+
+            <!-- Left Tool Icons -->
             <div class="flex items-center space-x-2 text-[#717586]">
-              <span id="attachName" class="text-[11px] text-[#575a6c]"></span>
-              <input id="fileInput" type="file" class="hidden" />
+              <button title="Conversations" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
+                </svg>
+              </button>
+              <button title="Image Generation" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="M21 15l-5-5L5 21"/>
+                </svg>
+              </button>
+              <button title="Audio Mode" class="p-1.5 hover:text-purple-300 rounded hover:bg-white/[0.04] transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219M21 16c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3c.4 0 .777.078 1.125.219"/>
+                </svg>
+              </button>
             </div>
 
+            <!-- Right Controls: Model Pill, Attach, Mic, Voice Wave Button -->
             <div class="flex items-center space-x-2">
+
+              <!-- Model Switcher Dropdown Button -->
               <div class="relative inline-block text-left" id="modelDropdownContainer">
                 <button id="modelSelectBtn" class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-[#1b1c26] border border-[#2b2d3e] text-xs font-medium text-white/90 hover:border-purple-500/40 transition-colors">
-                  <span id="currentModelLabel" class="text-[11px] text-[#cfd2dd]">tiny-50M</span>
-                  <span class="text-[#777b8d] text-[10px]">v</span>
+                  <!-- Orange Sparkle Badge -->
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#f97316]/20 border border-[#f97316]/40 flex items-center justify-center">
+                    <svg class="w-2 h-2 text-[#fb923c]" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/>
+                    </svg>
+                  </div>
+                  <span id="currentModelLabel" class="text-[11px] text-[#cfd2dd]">3.5 Sonnet</span>
+                  <svg class="w-3 h-3 text-[#777b8d]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                  </svg>
                 </button>
-                <div id="modelDropdownMenu" class="hidden absolute right-0 bottom-full mb-2 w-44 rounded-xl bg-[#171822] border border-[#2a2c3d] shadow-2xl py-1 z-30 text-xs">
-                  <button onclick="changeModel('tiny-50M', 256)" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-white">tiny-50M</button>
-                  <button onclick="changeModel('tiny-50M-long', 512)" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-[#9ca1b5]">tiny-50M-long</button>
+
+                <!-- Hidden Model Dropdown Menu -->
+                <div id="modelDropdownMenu" class="hidden absolute right-0 bottom-full mb-2 w-40 rounded-xl bg-[#171822] border border-[#2a2c3d] shadow-2xl py-1 z-30 text-xs">
+                  <button onclick="changeModel('3.5 Sonnet')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-white flex items-center justify-between">
+                    <span>3.5 Sonnet</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                  </button>
+                  <button onclick="changeModel('Claude 3 Opus')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-[#9ca1b5]">
+                    <span>Claude 3 Opus</span>
+                  </button>
+                  <button onclick="changeModel('GPT-4o')" class="w-full text-left px-3 py-1.5 hover:bg-white/[0.06] text-[#9ca1b5]">
+                    <span>GPT-4o</span>
+                  </button>
                 </div>
               </div>
 
-              <button id="attachBtn" title="Attach file" class="p-1.5 text-[#73778a] hover:text-white rounded hover:bg-white/[0.04] transition-colors text-sm">+</button>
-
-              <button id="sendBtn" title="Generate" class="h-8 px-4 rounded-lg bg-[#181926] border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] flex items-center justify-center hover:border-purple-400 transition-all text-xs font-semibold text-purple-200">
-                <span id="sendLabel">Generate</span>
+              <!-- Attachment Paperclip -->
+              <button title="Attach file" class="p-1.5 text-[#73778a] hover:text-white rounded hover:bg-white/[0.04] transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.37l-9.02 9.02a1.5 1.5 0 01-2.122-2.122l8.485-8.485"/>
+                </svg>
               </button>
+
+              <!-- Microphone -->
+              <button title="Voice input" class="p-1.5 text-[#73778a] hover:text-white rounded hover:bg-white/[0.04] transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 003-3V6a3 3 0 00-6 0v6a3 3 0 003 3z"/>
+                </svg>
+              </button>
+
+              <!-- Neon Voice Visualizer / Audio Wave Button -->
+              <button id="sendVoiceBtn" title="Voice Response" class="h-8 px-2.5 rounded-lg bg-[#181926] border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] flex items-center justify-center space-x-1 hover:border-purple-400 transition-all group">
+                <div class="flex items-center space-x-[2px] h-4">
+                  <span class="wave-bar w-[2px] bg-purple-300 rounded-full"></span>
+                  <span class="wave-bar w-[2px] bg-purple-400 rounded-full"></span>
+                  <span class="wave-bar w-[2px] bg-purple-200 rounded-full"></span>
+                  <span class="wave-bar w-[2px] bg-purple-400 rounded-full"></span>
+                </div>
+              </button>
+
             </div>
+
           </div>
 
         </div>
@@ -260,135 +572,69 @@
   </div>
 
   <script>
-    lucide.createIcons();
-    let maxTokens = 256;
-    let attachedFile = null;
-    let exchanges = JSON.parse(localStorage.getItem('alfa_chats') || '[]');
-
-    function esc(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-    function renderMd(md) {
-      let h = esc(md || '');
-      h = h.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => '<pre style="background:#0a0b10;border:1px solid #232530;border-radius:12px;padding:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;">' + code + '</pre>');
-      h = h.replace(/\n/g, '<br>');
-      h = h.replace(/&lt;details&gt;/g, '<details style="border:1px solid #232530;border-radius:10px;padding:8px 10px;margin-bottom:8px;">').replace(/&lt;\/details&gt;/g, '</details>')
-           .replace(/&lt;summary&gt;/g, '<summary style="cursor:pointer;color:#9ca1b5;font-size:12px;">').replace(/&lt;\/summary&gt;/g, '</summary>');
-      return h;
-    }
-
-    function renderHistory() {
-      const ul = document.getElementById('historyList');
-      if (!ul) return;
-      if (!exchanges.length) { ul.innerHTML = '<li class="text-[#575a68] px-1.5">No chats yet.</li>'; return; }
-      ul.innerHTML = exchanges.slice(-8).reverse().map((e, i) =>
-        `<li onclick="loadExchange(${exchanges.length - 1 - i})" class="py-1 px-1.5 rounded hover:bg-white/[0.04] cursor-pointer text-[#7a7e8e] hover:text-white transition-colors truncate">${esc((e.prompt || '').slice(0, 34))}</li>`
-      ).join('');
-    }
-    function loadExchange(i) {
-      const e = exchanges[i];
-      if (!e) return;
-      document.getElementById('promptInput').value = e.prompt;
-      showResult('<div class="text-[#575a68] text-[11px] mb-1">engine: ' + esc(e.engine || '?') + '</div>' + renderMd(e.markdown));
-    }
-    function saveExchange(prompt, markdown, engine) {
-      exchanges.push({ prompt, markdown, engine, t: Date.now() });
-      localStorage.setItem('alfa_chats', JSON.stringify(exchanges.slice(-50)));
-      renderHistory();
-    }
-
-    function selectPrompt(t) {
+    // Prompt selection from suggestion cards
+    function selectPrompt(promptText) {
       const input = document.getElementById('promptInput');
-      input.value = t; input.focus();
-    }
-    function setMode(m) {
-      const map = { code: 'Write a Python function that ', image: 'Describe the attached image and write code for it:\n', video: 'Describe this clip, then write code to render it:\n' };
-      selectPrompt(map[m] || '');
+      input.value = promptText;
+      input.focus();
+
+      // Visual feedback pulse
+      input.parentElement.parentElement.classList.add('ring-2', 'ring-purple-500/50');
+      setTimeout(() => {
+        input.parentElement.parentElement.classList.remove('ring-2', 'ring-purple-500/50');
+      }, 350);
     }
 
+    // Model Selector Dropdown toggling
     const modelBtn = document.getElementById('modelSelectBtn');
     const modelMenu = document.getElementById('modelDropdownMenu');
     const modelLabel = document.getElementById('currentModelLabel');
-    modelBtn.addEventListener('click', (e) => { e.stopPropagation(); modelMenu.classList.toggle('hidden'); });
-    function changeModel(name, tokens) {
-      modelLabel.textContent = name; maxTokens = tokens;
+
+    modelBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      modelMenu.classList.toggle('hidden');
+    });
+
+    function changeModel(name) {
+      modelLabel.textContent = name;
       modelMenu.classList.add('hidden');
     }
-    document.addEventListener('click', () => { modelMenu.classList.add('hidden'); });
 
-    document.getElementById('attachBtn').addEventListener('click', () => document.getElementById('fileInput').click());
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-      attachedFile = e.target.files[0] || null;
-      document.getElementById('attachName').textContent = attachedFile ? attachedFile.name : '';
-    });
-
-    function showResult(html) {
-      const box = document.getElementById('resultArea');
-      box.classList.remove('hidden');
-      box.innerHTML = html;
-      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    async function submit() {
-      const input = document.getElementById('promptInput');
-      const prompt = input.value.trim();
-      if (!prompt) return;
-      document.getElementById('sendLabel').textContent = '...';
-      showResult('<span class="text-[#8a8a93]">Thinking...</span>');
-      try {
-        let res;
-        if (attachedFile) {
-          const fd = new FormData();
-          fd.append('prompt', prompt);
-          fd.append('max_tokens', maxTokens);
-          fd.append('file', attachedFile);
-          res = await fetch('/api/generate', { method: 'POST', body: fd });
-        } else {
-          res = await fetch('/api/generate', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, max_tokens: maxTokens }),
-          });
-        }
-        const data = await res.json();
-        const html = '<div class="text-[#575a68] text-[11px] mb-1">engine: ' + esc(data.engine || '?') + '</div>' + renderMd(data.markdown);
-        showResult(html);
-        saveExchange(prompt, data.markdown || '', data.engine || '');
-        input.value = '';
-        attachedFile = null;
-        document.getElementById('attachName').textContent = '';
-        document.getElementById('fileInput').value = '';
-      } catch (err) {
-        showResult('<span style="color:#f87171">Request failed: ' + esc(String(err)) + '</span>');
+    // Dismiss dropdown when clicking outside
+    document.addEventListener('click', () => {
+      if (!modelMenu.classList.contains('hidden')) {
+        modelMenu.classList.add('hidden');
       }
-      document.getElementById('sendLabel').textContent = 'Generate';
-    }
-    document.getElementById('sendBtn').addEventListener('click', submit);
-    document.getElementById('promptInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') submit();
     });
 
+    // Handle Enter key submission on prompt
+    const promptInput = document.getElementById('promptInput');
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && promptInput.value.trim() !== '') {
+        const userQuery = promptInput.value.trim();
+        promptInput.value = '';
+
+        // Show gentle interaction state
+        const placeholderBackup = promptInput.placeholder;
+        promptInput.placeholder = 'Thinking with ' + modelLabel.textContent + '...';
+        setTimeout(() => {
+          promptInput.placeholder = placeholderBackup;
+        }, 2200);
+      }
+    });
+
+    // Sidebar collapse/expand toggle on smaller displays
     const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
-    if (sidebarToggleBtn) {
-      sidebarToggleBtn.addEventListener('click', () => {
-        document.querySelector('aside').classList.toggle('hidden');
-      });
-    }
+    const sidebar = document.querySelector('aside');
+    sidebarToggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('hidden');
+    });
+
+    // New Chat button clears input and focuses
     document.getElementById('btnNewChat').addEventListener('click', () => {
-      document.getElementById('promptInput').value = '';
-      document.getElementById('resultArea').classList.add('hidden');
-      document.getElementById('promptInput').focus();
+      promptInput.value = '';
+      promptInput.focus();
     });
-
-    fetch('/api/status').then(r => r.json()).then(d => {
-      document.getElementById('engineLabel').textContent = 'Engine: ' + d.mode;
-      document.getElementById('engineSub').textContent = d.device + (d.reason ? ' — ' + d.reason : '');
-      document.getElementById('engineDot').className = 'w-2 h-2 rounded-full ' + (d.mode === 'mock' ? 'bg-yellow-500' : 'bg-green-500');
-    }).catch(() => {
-      document.getElementById('engineLabel').textContent = 'Engine: offline';
-    });
-
-    renderHistory();
-    lucide.createIcons();
   </script>
 </body>
 </html>
