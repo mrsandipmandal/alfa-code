@@ -49,7 +49,7 @@ def main():
     ap.add_argument("--wrap", action="store_true",
                     help="wrap prompt like training rows (Complete and explain...)")
     ap.add_argument("--max-new-tokens", type=int, default=200)
-    ap.add_argument("--temperature", type=float, default=0.8)
+    ap.add_argument("--temperature", type=float, default=0.6)
     ap.add_argument("--top-p", type=float, default=0.95)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--tokenizer", default="tokenizers/alfa-32k.json",

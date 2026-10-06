@@ -67,11 +67,17 @@ def build_prompt(prompt, image=None, file=None, video=None):
     task = f"Complete and explain this task:\n{header}{prompt}"
     if ctx:
         task += f"\nContext files: {', '.join(ctx)}"
+    # question-style prompts (chat Q&A) get an explicit code-answer nudge,
+    # since training rows are completion-style, not conversational
+    p = (prompt or "").strip().lower()
+    if p.endswith("?") or p.startswith(("what ", "how ", "why ", "are you", "is ",
+                                        "do you", "can you", "explain", "write")):
+        task += "\nAnswer briefly, then show the code."
     return task, ctx
 
 
 def generate(prompt, image=None, file=None, video=None,
-             max_new_tokens=256, temperature=0.8):
+             max_new_tokens=256, temperature=0.6, repetition_penalty=1.15):
     """Yield (status, chat_markdown) steps for the Gradio UI."""
     b = get_backend()
     task, ctx = build_prompt(prompt or "", image, file, video)
@@ -106,6 +112,7 @@ def generate(prompt, image=None, file=None, video=None,
                 out = b["model"].generate(
                     inp, max_new_tokens=max_new_tokens,
                     do_sample=True, temperature=temp, top_p=0.95,
+                    repetition_penalty=repetition_penalty,
                     pad_token_id=pad_id)
             return decode_ids(out[0][inp.shape[1]:].tolist(), b["tok"])
 

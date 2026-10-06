@@ -107,14 +107,15 @@ def _to_pairs(messages):
     return pairs
 
 
-def _chat_turn(prompt, history, image, file, video, deep_think):
+def _chat_turn(prompt, history, image, file, video, deep_think, temperature):
     pairs = _to_pairs(history)
     user_label = (prompt or "")[:200]
     n_tokens = 512 if deep_think else 256
     final_md = ""
     status = "[Thinking...]"
     for status, chat_md in generate(prompt, image, file, video,
-                                    max_new_tokens=n_tokens):
+                                    max_new_tokens=n_tokens,
+                                    temperature=float(temperature)):
         final_md = chat_md
         yield status, _to_messages(pairs + [[user_label, chat_md + "\n\n_...generating..._"]]), _history_md(pairs)
     done_pairs = pairs + [[user_label, final_md]]
@@ -173,13 +174,16 @@ with gr.Blocks(title="AI Workspace", css=CSS, elem_classes="alfa-app") as demo:
             with gr.Row():
                 deep = gr.Checkbox(label="Deep Think (longer answer)", value=False,
                                    elem_classes="alfa-deep")
+                temp = gr.Slider(0.1, 1.5, value=0.6, step=0.1,
+                                 label="Temperature (low = focused)",
+                                 elem_classes="alfa-deep")
                 btn = gr.Button("Generate", elem_classes="alfa-send")
             status = gr.Label(value="[Idle]", label="Reasoning status")
             gr.Markdown(f"<div class='alfa-status'>{_engine_line()}</div>")
             chat = gr.Chatbot(label="History", height=420)
 
     btn.click(fn=_chat_turn,
-              inputs=[prompt, chat, img, fil, vid, deep],
+              inputs=[prompt, chat, img, fil, vid, deep, temp],
               outputs=[status, chat, hist_md])
     new_chat.click(fn=_clear, inputs=[], outputs=[chat, prompt, status, hist_md])
     nav_chat.click(fn=lambda: "", inputs=[], outputs=[prompt])

@@ -45,7 +45,7 @@ def status():
     return {"mode": b["mode"], "device": b["device"], "reason": b["reason"]}
 
 
-def _run(prompt: str, path=None, max_tokens: int = 256, temperature: float = 0.8):
+def _run(prompt: str, path=None, max_tokens: int = 256, temperature: float = 0.6):
     final_md, final_status = "", "[Done]"
     for final_status, final_md in generate(prompt, None, path, None,
                                            max_new_tokens=max_tokens,
@@ -74,7 +74,7 @@ async def generate_ep(request: Request):
         payload = await request.json()
         return _run(str(payload.get("prompt", "")),
                     max_tokens=int(payload.get("max_tokens", 256)),
-                    temperature=float(payload.get("temperature", 0.8)))
+                    temperature=float(payload.get("temperature", 0.6)))
     finally:
         if path:
             try:
