@@ -31,9 +31,13 @@ Output: `data/processed/train.jsonl` {modality,prompt,think,answer}
 `pip install torch --index-url https://download.pytorch.org/whl/cu121`
 `python scripts/train.py` -> `outputs/tiny-50M`
 
-## 3. GGUF
-`git clone https://github.com/ggerganov/llama.cpp third_party/llama.cpp`
-`python scripts/convert_to_gguf.py --ckpt outputs/tiny-50M --quant Q4_K_M --out outputs/tiny-50M.gguf`
+## 3. GGUF (no llama.cpp clone needed)
+`pip install gguf safetensors torch transformers`
+`python scripts/convert_to_gguf.py --ckpt outputs/tiny-50M --quant Q8_0` (Q8_0 ~55MB, Q4_0 ~32MB, F16 ~105MB)
+K-quants (Q4_K_M) need standard dims + `llama-quantize` binary — not offered (intermediate 1376).
+
+Run local (RTX 3050 4GB):
+`llama-server -m outputs/tiny-50M.gguf -c 2048` or Ollama Modelfile (`FROM ./outputs/tiny-50M.gguf`).
 
 ## 4. UI (reasoning live->collapsed + image/file/video)
 `python app/ui.py` -> http://127.0.0.1:7860
