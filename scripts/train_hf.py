@@ -44,22 +44,51 @@ def build_model(model_cfg, resume_from=""):
 
 
 def estimate_need_gb(num_params: int, fp16: bool = True) -> float:
-    """Disk needed: final weights + one full checkpoint copy + 25% margin."""
-    per_param = 2 if fp16 else 4
-    return num_params * per_param * 2 * 1.25 / 1e9
+    """Disk for one full checkpoint (weights + fp32 Adam states) + margin.
+
+    Trainer saves optimizer states too: 1.1B fp32 Adam ~= 9GB alone.
+    During rotation 2 checkpoints coexist transiently — hence x2 + margin.
+    """
+    w = 2 if fp16 else 4
+    return num_params * (w + 8) * 2 * 1.3 / 1e9
+
+
+def _cache_dirs():
+    import os
+
+    return {
+        "HF_HOME": os.getenv("HF_HOME", os.path.expanduser("~/.cache/huggingface")),
+        "TMPDIR": os.getenv("TMPDIR", "/tmp"),
+    }
 
 
 def check_disk_gb(path, need_gb: float):
-    """Fail fast BEFORE training instead of dying mid-run at checkpoint save."""
+    """Fail fast BEFORE training: check out dir AND cache/tmp mounts.
+
+    (Last time the out dir had space but the HF-cache mount was full,
+    killing a 61% run at checkpoint save.)
+    """
     import shutil
 
     Path(path).mkdir(parents=True, exist_ok=True)
-    free_gb = shutil.disk_usage(str(path)).free / 1e9
-    print(f"disk: {free_gb:.1f} GB free at {path}, need ~{need_gb:.1f} GB", flush=True)
-    if free_gb < need_gb:
+    targets = {"outputs": str(path)}
+    targets.update(_cache_dirs())
+    worst = None
+    for label, p in targets.items():
+        try:
+            Path(p).mkdir(parents=True, exist_ok=True)
+            free_gb = shutil.disk_usage(str(p)).free / 1e9
+        except OSError:
+            free_gb = 0.0
+        print(f"disk: {free_gb:.1f} GB free at {label} ({p}), need ~{need_gb:.1f} GB", flush=True)
+        if free_gb < need_gb and (worst is None or free_gb < worst[1]):
+            worst = (label, free_gb)
+    if worst is not None:
+        label, free_gb = worst
         raise SystemExit(
-            f"NOT ENOUGH DISK ({free_gb:.1f} < {need_gb:.1f} GB) — free space first:\n"
-            "  rm -rf outputs/checkpoint-* ~/.cache/huggingface/datasets ~/.cache/pip\n"
+            f"NOT ENOUGH DISK at {label} ({free_gb:.1f} < {need_gb:.1f} GB) — free space first:\n"
+            "  rm -rf outputs/*/checkpoint-* ~/.cache/huggingface ~/.cache/pip /tmp/*\n"
+            "  or redirect caches: export HF_HOME=/kaggle/working/.hf-cache\n"
             "  then rerun. (Checkpoints + HF datasets cache are the usual hogs.)")
 
 
