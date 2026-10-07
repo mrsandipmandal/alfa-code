@@ -76,3 +76,18 @@ def decode_ids(ids, tok) -> str:
     pad_id = tok.pad_token_id
     ids = [i for i in ids if i != pad_id]
     return tok.decode(ids, skip_special_tokens=False)
+
+
+def cuda_hint() -> str:
+    """Platform-aware fix-it hint when torch can't see CUDA."""
+    import os
+
+    if os.getenv("KAGGLE_KERNEL_RUN_TYPE"):
+        where = ("On Kaggle: stop this session, then Session options > "
+                 "Accelerator > GPU T4x2 (NOT TPU — our stack is CUDA-only), "
+                 "Internet ON, then rerun.")
+    else:
+        where = ("On Colab: Runtime > Change runtime type > T4 GPU, "
+                 "then restart + rerun.")
+    return ("WARNING: CUDA not visible — training will run on CPU (~10x slower). "
+            f"{where} If torch is CPU-only, reinstall with CUDA support.")

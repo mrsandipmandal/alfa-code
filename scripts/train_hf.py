@@ -120,9 +120,8 @@ def main():
         print(f"gpu: {torch.cuda.get_device_name(0)} "
               f"({torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB)", flush=True)
     else:
-        print("WARNING: CUDA not visible — training will run on CPU (~10x slower). "
-              "On Colab: Runtime > Change runtime type > T4 GPU, then restart + rerun. "
-              "If torch is CPU-only, reinstall with CUDA support.", flush=True)
+        from bpe import cuda_hint
+        print(cuda_hint(), flush=True)
     model_cfg = LlamaConfig(
         hidden_size=int(mdl.get("hidden_size", 512)),
         num_hidden_layers=int(mdl.get("num_layers", 8)),
