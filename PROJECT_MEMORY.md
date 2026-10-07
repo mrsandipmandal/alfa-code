@@ -132,6 +132,9 @@ Corrected English:
 - [2026-10-05] Kaggle notebook ("train limit nai... kaggle er jonno notebook banau") — Colab 1B train success (100% 375/375, 4.2GB) + Colab quota শেষ।
   Implemented: `notebooks/kaggle_t4.ipynb` — kaggle_secrets HF_TOKEN, /kaggle/working paths, MODEL switch, data/train/cycle/upload/infer cells, no colab imports।
   Verified: no google.colab refs, no /content paths, python syntax OK।
+- [2026-10-05] Resume training ("1B ta to train hoyechilo... ki abar korte hobe?") — প্রতি cycle-এ from-scratch retrain মানে 3h ফালতু; checkpoint থেকে continue করাই সঠিক।
+  Implemented: `--resume-from` in train_hf.py + train.py (shared build_model; arch must match config; clean exit on bad path) + cycle cell retrains with `--resume-from {OUT} --epochs 1` into versioned self-cycle-N।
+  Verified: resume loads exact ckpt weights, fresh differs, bad path exits clean, notebooks valid।
   Review model: auto-upload versioned `outputs/self-cycle-N`, promote to base-1B only on approve (rollback = previous cycle)।
 - [2026-10-05] 1B OOM in SDPA (log: ultrachat wrong split + OOM at 2% + gradio6 css warning) — 3 fixes, all verified।
   Implemented: SOURCES split support (ultrachat→train_sft, all others explicit train); scale-up 1B cell --max-seq-len 1024 (2048 OOMs on T4) + PYTORCH alloc hint;
