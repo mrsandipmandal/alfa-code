@@ -13,6 +13,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
+def build_model(model_cfg, resume_from=""):
+    """Fresh random init, or continue from a checkpoint dir (self-learn cycles).
+
+    Config still comes from --config (arch must match the checkpoint).
+    """
+    import torch
+    from transformers import LlamaForCausalLM
+
+    if resume_from:
+        p = Path(resume_from)
+        if not (p / "config.json").exists():
+            raise SystemExit(f"--resume-from has no config.json: {resume_from}")
+        print(f"resuming from checkpoint: {resume_from}", flush=True)
+        model = LlamaForCausalLM.from_pretrained(
+            str(p), torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32)
+    else:
+        model = LlamaForCausalLM(model_cfg)
+    return model
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=os.getenv("ALFA_DATA", "/data/processed/train.jsonl"))
@@ -27,6 +47,8 @@ def main():
                     help="override config gradient accumulation (higher = less VRAM per step)")
     ap.add_argument("--optim", default=None,
                     help="optimizer: adamw_torch (default) or adamw_8bit (half optimizer VRAM, needs bitsandbytes)")
+    ap.add_argument("--resume-from", default=os.getenv("ALFA_RESUME", ""),
+                    help="continue training from this checkpoint dir instead of random init (self-learn cycles)")
     args = ap.parse_args()
 
     import yaml
@@ -111,7 +133,7 @@ def main():
         max_position_embeddings=seq_len,
         rope_theta=rope_theta,
     )
-    model = LlamaForCausalLM(model_cfg)
+    model = build_model(model_cfg, args.resume_from)
     if grad_ckpt:
         model.gradient_checkpointing_enable()
     ds = JsonlDS(args.data, tok_len=seq_len)

@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, encode_text, load_bpe_tokenizer
+from train_hf import build_model
 
 import torch
 import yaml
@@ -54,6 +55,7 @@ def load_cfg(path: str | None) -> dict:
         "epochs": int(t.get("epochs", 1)),
         "output_dir": t.get("output_dir", "outputs/tiny-50M"),
         "optim": t.get("optim", "adamw_torch"),
+        "resume_from": t.get("resume_from", ""),
     }
 
 
@@ -123,6 +125,8 @@ def main():
     ap.add_argument("--grad-accum", type=int, default=None)
     ap.add_argument("--optim", default=None,
                     help="adamw_torch (default) or adamw_8bit (needs bitsandbytes)")
+    ap.add_argument("--resume-from", default=os.getenv("ALFA_RESUME", ""),
+                    help="continue training from this checkpoint dir (self-learn cycles)")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
@@ -138,6 +142,7 @@ def main():
         cfg["grad_accum"] = args.grad_accum
     if args.optim:
         cfg["optim"] = args.optim
+    resume_from = args.resume_from or cfg.get("resume_from", "")
     if cfg.get("optim", "adamw_torch") == "adamw_8bit":
         try:
             import bitsandbytes  # noqa: F401
@@ -146,7 +151,7 @@ def main():
 
     print(f"config: seq_len={cfg['max_seq_len']} rope_theta={cfg['rope_theta']} "
           f"bs={cfg['batch_size']} accum={cfg['grad_accum']} ckpt={cfg['grad_ckpt']} "
-          f"optim={cfg.get('optim', 'adamw_torch')}")
+          f"optim={cfg.get('optim', 'adamw_torch')} resume={resume_from or 'fresh'}")
     cuda = torch.cuda.is_available()
     print(f"torch={torch.__version__} cuda={cuda}", flush=True)
     if cuda:
@@ -164,7 +169,7 @@ def main():
         max_position_embeddings=cfg["max_seq_len"],
         rope_theta=cfg["rope_theta"],
     )
-    model = LlamaForCausalLM(model_cfg)
+    model = build_model(model_cfg, resume_from)
     if cfg["grad_ckpt"]:
         model.gradient_checkpointing_enable()
 
