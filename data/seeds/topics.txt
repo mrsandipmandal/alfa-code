@@ -1,0 +1,16 @@
+# Seed prompts for the self-learning loop (scripts/self_learn.py).
+# One per line. Lines starting with # are ignored.
+# These + sampled train rows become generation seeds; filtered outputs
+# are appended to train data (synthetic cap 30%).
+Write a Python function that sorts a list
+Write a Python function that reads a CSV file
+Explain list comprehension with an example
+Find and fix the bug in this code:
+Write a Python class for a bank account
+Write a function that checks if a string is a palindrome
+Explain Python decorators with an example
+Write a Python function that counts word frequency
+How do I handle files safely in Python?
+Write a todo list for my day
+Explain this code snippet:
+Describe the attached image and write code for it:
