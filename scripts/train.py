@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, encode_text, load_bpe_tokenizer
-from train_hf import build_model
+from train_hf import build_model, resolve_fsdp_optim
 
 import torch
 import yaml
@@ -55,6 +55,7 @@ def load_cfg(path: str | None) -> dict:
         "epochs": int(t.get("epochs", 1)),
         "output_dir": t.get("output_dir", "outputs/tiny-50M"),
         "optim": t.get("optim", "adamw_torch"),
+        "fsdp": t.get("fsdp", ""),
         "resume_from": t.get("resume_from", ""),
     }
 
@@ -127,6 +128,8 @@ def main():
                     help="adamw_torch (default) or adamw_8bit (needs bitsandbytes)")
     ap.add_argument("--resume-from", default=os.getenv("ALFA_RESUME", ""),
                     help="continue training from this checkpoint dir (self-learn cycles)")
+    ap.add_argument("--fsdp", default=os.getenv("ALFA_FSDP", ""),
+                    help='FSDP sharding across GPUs, e.g. "full_shard" (Kaggle T4x2). Empty = single-GPU.')
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
@@ -142,6 +145,9 @@ def main():
         cfg["grad_accum"] = args.grad_accum
     if args.optim:
         cfg["optim"] = args.optim
+    fsdp, optim = resolve_fsdp_optim(args.fsdp or cfg.get("fsdp", ""),
+                                     cfg.get("optim", "adamw_torch"))
+    cfg["optim"] = optim
     resume_from = args.resume_from or cfg.get("resume_from", "")
     if cfg.get("optim", "adamw_torch") == "adamw_8bit":
         try:
@@ -151,7 +157,7 @@ def main():
 
     print(f"config: seq_len={cfg['max_seq_len']} rope_theta={cfg['rope_theta']} "
           f"bs={cfg['batch_size']} accum={cfg['grad_accum']} ckpt={cfg['grad_ckpt']} "
-          f"optim={cfg.get('optim', 'adamw_torch')} resume={resume_from or 'fresh'}")
+          f"optim={cfg['optim']} fsdp={fsdp or 'off'} resume={resume_from or 'fresh'}")
     cuda = torch.cuda.is_available()
     print(f"torch={torch.__version__} cuda={cuda}", flush=True)
     if cuda:
@@ -188,8 +194,12 @@ def main():
         logging_steps=5, save_steps=50,
         fp16=torch.cuda.is_available(),
         gradient_checkpointing=cfg["grad_ckpt"],
-        optim=cfg.get("optim", "adamw_torch"),
+        optim=cfg["optim"],
         report_to="none",
+        **({"fsdp": fsdp,
+            "fsdp_config": {"fsdp_state_dict_type": "FULL_STATE_DICT",
+                            "fsdp_transformer_layer_cls_to_wrap": "LlamaDecoderLayer"}}
+           if fsdp else {}),
     )
     try:
         Trainer(model=model, args=targs, train_dataset=ds).train()

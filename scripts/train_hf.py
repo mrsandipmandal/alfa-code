@@ -13,6 +13,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
+def resolve_fsdp_optim(fsdp, optim):
+    """FSDP needs sharded-optimizer-compatible setup: 8-bit adam is out."""
+    fsdp = (fsdp or "").strip()
+    if fsdp and optim == "adamw_8bit":
+        print("FSDP + adamw_8bit incompatible -> falling back to adamw_torch "
+              "(states are sharded across GPUs instead)", flush=True)
+        optim = "adamw_torch"
+    return fsdp, optim
+
+
 def build_model(model_cfg, resume_from=""):
     """Fresh random init, or continue from a checkpoint dir (self-learn cycles).
 
@@ -49,6 +59,8 @@ def main():
                     help="optimizer: adamw_torch (default) or adamw_8bit (half optimizer VRAM, needs bitsandbytes)")
     ap.add_argument("--resume-from", default=os.getenv("ALFA_RESUME", ""),
                     help="continue training from this checkpoint dir instead of random init (self-learn cycles)")
+    ap.add_argument("--fsdp", default=os.getenv("ALFA_FSDP", ""),
+                    help='FSDP sharding across GPUs, e.g. "full_shard" (Kaggle T4x2). Empty = single-GPU.')
     args = ap.parse_args()
 
     import yaml
@@ -73,6 +85,7 @@ def main():
     if args.grad_accum:
         accum = args.grad_accum
     optim = args.optim or trn.get("optim", "adamw_torch")
+    fsdp, optim = resolve_fsdp_optim(args.fsdp or trn.get("fsdp", ""), optim)
     if optim == "adamw_8bit":
         try:
             import bitsandbytes  # noqa: F401
@@ -136,6 +149,14 @@ def main():
     if grad_ckpt:
         model.gradient_checkpointing_enable()
     ds = JsonlDS(args.data, tok_len=seq_len)
+    fsdp_kwargs = {}
+    if fsdp:
+        # shard params+grads+optim states across GPUs; save full state dict
+        # so infer/GGUF/upload paths keep working unchanged
+        fsdp_kwargs = {"fsdp": fsdp,
+                       "fsdp_config": {"fsdp_state_dict_type": "FULL_STATE_DICT",
+                                       "fsdp_transformer_layer_cls_to_wrap": "LlamaDecoderLayer"}}
+        print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
     targs = TrainingArguments(
         output_dir=args.out, per_device_train_batch_size=bs,
         gradient_accumulation_steps=accum,
@@ -143,6 +164,7 @@ def main():
         logging_steps=2, save_steps=50, save_total_limit=1,
         fp16=torch.cuda.is_available(), report_to="none",
         gradient_checkpointing=grad_ckpt, optim=optim,
+        **fsdp_kwargs,
     )
     try:
         Trainer(model=model, args=targs, train_dataset=ds).train()
