@@ -126,6 +126,9 @@ Corrected English:
 - [2026-10-05] Kaggle production verify — ultrachat split fix কাজ করেছে (train_sft → 2000 rows, tokenizer vocab 32000) ✅। কিন্তু session No Accelerator → torch+cpu, 1B CPU-তে অসম্ভব। Fix: session GPU T4x2 enable করতে হবে।
 - [2026-10-05] T4x2 vs TPU ("konta batter?") — **GPU T4x2**। TPU-তে চলবে না (PyTorch+bitsandbytes+fp16 CUDA-only stack; TPU-তে torch-xla rewrite লাগতো)।
   Implemented: `cuda_hint()` in bpe.py (Kaggle vs Colab aware), used by both train scripts। Verified both messages।
+- [2026-10-05] Kaggle 2 errors ("why?" + OOM hints + 404s) — (1) self_learn tried Hub download of local path `outputs/tiny-50M` → 404; (2) OOM with DDP frames (accelerate used BOTH T4s, doubling memory).
+  Implemented: ckpt fast-fail with actionable message (no more confusing 404); all train cells `CUDA_VISIBLE_DEVICES=0` (single GPU, no DDP buckets);
+  cycle cells pass `--ckpt {OUT}`; kaggle cycle retrain also got missing `--resume-from {OUT}`। Verified cells + clean exit।
 - [2026-10-05] MODEL switch ("tiny-50M kano ami to 1B nicchi to?") — default train cell tiny-50M-এ hardcode ছিল।
   Implemented: setup cell (`MODEL = "base-1B"` / `"tiny-50M"`) থেকে CONFIG/OUT/EPOCHS/SEQ_LEN/BS/ROWS/CHAT_ROWS derive; data + train cells `{var}` interpolation;
   redundant scale-up cell removed; upload/UI cells already model-agnostic।   Verified order clone→setup→data→train→upload→ui।
