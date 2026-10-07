@@ -128,7 +128,10 @@ Corrected English:
   Implemented: `cuda_hint()` in bpe.py (Kaggle vs Colab aware), used by both train scripts। Verified both messages।
 - [2026-10-05] Kaggle 2 errors ("why?" + OOM hints + 404s) — (1) self_learn tried Hub download of local path `outputs/tiny-50M` → 404; (2) OOM with DDP frames (accelerate used BOTH T4s, doubling memory).
   Implemented: ckpt fast-fail with actionable message (no more confusing 404); all train cells `CUDA_VISIBLE_DEVICES=0` (single GPU, no DDP buckets);
-  cycle cells pass `--ckpt {OUT}`; kaggle cycle retrain also got missing `--resume-from {OUT}`।   Verified cells + clean exit।
+  cycle cells pass `--ckpt {OUT}`; kaggle cycle retrain also got missing `--resume-from {OUT}`। Verified cells + clean exit।
+- [2026-10-05] FSDP both-GPUs ("why single T4... time kom lagto na?" → Recommended bs2/seq2048/accum8 → "apply")।
+  Implemented: `--fsdp full_shard` (+FULL_STATE_DICT save, Llama wrap) in both train scripts; adamw_8bit auto-fallback (incompatible); kaggle setup USE_FSDP/LAUNCH/ACCUM/FSDP_FLAG, train+cycle cells use them।
+  Verified: compile, flags, resolve matrix, cfg keys, notebook cells, TrainingArguments signature। First real test = Kaggle smoke (quota-safe), then full run।
 - [2026-10-05] Kaggle clone getcwd bug ("ball korcho bara... dakh ki holo") — shell cwd (/kaggle/working/alfa) মুছে ফেলায় clone fail → সব cell cascade fail। Colab-এ আগের fix Kaggle notebook-এ ছিল না।
   Implemented: kaggle clone cell-এ `%cd /content`→`%cd /kaggle/working` guard; 3 notebook-এ guard-before-rm verified।
 - [2026-10-05] MODEL switch ("tiny-50M kano ami to 1B nicchi to?") — default train cell tiny-50M-এ hardcode ছিল।
