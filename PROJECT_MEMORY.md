@@ -168,3 +168,6 @@ Corrected English:
   - সেন্টার: অ্যানিমেটেড ভাসমান পার্পল সেলিস্টিয়াল অর্ব (অরবিট রিং ও স্পার্কল কোর), "Welcome to AI Assistant", "How Can I Assist You?" হেডলাইন এবং ৩টি গ্লাস সাজেশনের কার্ড উইথ মিডিয়া আইকন;
   - নিয়ন গ্লোয়িং প্রম্পট বার: পার্পল আউটার গ্লো (`box-shadow`), স্পার্কল আইকনসহ টেক্সট বক্স, মিডিয়া টুলবার (চ্যাট, ইমেজ, মিউজিক), মডেল সিলেক্টর পিল, পেপারক্লিপ, মাইক এবং অ্যানিমেটেড অডিও ওয়েভফর্ম বাটন;
   - `app/ui.py`-তেও নিউট্রাল ব্র্যান্ডিং ("AI Workspace", "Welcome to AI Assistant", "Pro Access", "✦") প্রয়োগ করা হয়েছে; ব্যাকএন্ড ও API সম্পূর্ণ অপরিবর্তিত ও কার্যকর।
+- [2026-10-05] Disk-full crash ("kano holo?") — 15%-এ checkpoint save-এ ENOSPC (FSDP ঠিকই চলছিল, loss falling)। Checkpoint dirs empty → progress lost।
+  Implemented: disk preflight (fail fast with cleanup advice) + `--save-steps/--save-total-limit` (notebook: 200/1) + `--resume-ckpt` Trainer resume + kaggle cleanup lines (checkpoints + HF/pip cache + df check)।
+  Verified: estimate/check/kwargs unit tests, notebook cells, flags। Rerun: cleanup auto-runs, crash হলে --resume-ckpt দিয়ে continue।
