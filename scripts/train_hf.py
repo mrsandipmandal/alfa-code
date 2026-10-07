@@ -43,6 +43,42 @@ def build_model(model_cfg, resume_from=""):
     return model
 
 
+def estimate_need_gb(num_params: int, fp16: bool = True) -> float:
+    """Disk needed: final weights + one full checkpoint copy + 25% margin."""
+    per_param = 2 if fp16 else 4
+    return num_params * per_param * 2 * 1.25 / 1e9
+
+
+def check_disk_gb(path, need_gb: float):
+    """Fail fast BEFORE training instead of dying mid-run at checkpoint save."""
+    import shutil
+
+    Path(path).mkdir(parents=True, exist_ok=True)
+    free_gb = shutil.disk_usage(str(path)).free / 1e9
+    print(f"disk: {free_gb:.1f} GB free at {path}, need ~{need_gb:.1f} GB", flush=True)
+    if free_gb < need_gb:
+        raise SystemExit(
+            f"NOT ENOUGH DISK ({free_gb:.1f} < {need_gb:.1f} GB) — free space first:\n"
+            "  rm -rf outputs/checkpoint-* ~/.cache/huggingface/datasets ~/.cache/pip\n"
+            "  then rerun. (Checkpoints + HF datasets cache are the usual hogs.)")
+
+
+def make_training_kwargs(out, bs, accum, epochs, lr, save_steps, save_total_limit,
+                         fp16, grad_ckpt, optim, fsdp=""):
+    """Pure dict builder (no transformers import) — unit-testable."""
+    kw = dict(output_dir=out, per_device_train_batch_size=bs,
+              gradient_accumulation_steps=accum, num_train_epochs=epochs,
+              learning_rate=lr, logging_steps=2,
+              save_steps=save_steps, save_total_limit=save_total_limit,
+              fp16=fp16, report_to="none",
+              gradient_checkpointing=grad_ckpt, optim=optim)
+    if (fsdp or "").strip():
+        kw["fsdp"] = fsdp.strip()
+        kw["fsdp_config"] = {"fsdp_state_dict_type": "FULL_STATE_DICT",
+                             "fsdp_transformer_layer_cls_to_wrap": "LlamaDecoderLayer"}
+    return kw
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=os.getenv("ALFA_DATA", "/data/processed/train.jsonl"))
@@ -61,6 +97,12 @@ def main():
                     help="continue training from this checkpoint dir instead of random init (self-learn cycles)")
     ap.add_argument("--fsdp", default=os.getenv("ALFA_FSDP", ""),
                     help='FSDP sharding across GPUs, e.g. "full_shard" (Kaggle T4x2). Empty = single-GPU.')
+    ap.add_argument("--save-steps", type=int, default=None,
+                    help="checkpoint every N steps (fewer saves = less disk; default 50)")
+    ap.add_argument("--save-total-limit", type=int, default=None,
+                    help="keep at most N checkpoints (default 1)")
+    ap.add_argument("--resume-ckpt", default="",
+                    help="Trainer resume_from_checkpoint path: continues optimizer+step after a crash")
     args = ap.parse_args()
 
     import yaml
@@ -148,26 +190,20 @@ def main():
     model = build_model(model_cfg, args.resume_from)
     if grad_ckpt:
         model.gradient_checkpointing_enable()
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f"params: {n_params / 1e9:.2f}B", flush=True)
+    check_disk_gb(args.out, estimate_need_gb(n_params, fp16=torch.cuda.is_available()))
     ds = JsonlDS(args.data, tok_len=seq_len)
-    fsdp_kwargs = {}
+    kw = make_training_kwargs(
+        args.out, bs, accum, args.epochs, lr,
+        args.save_steps or 50, args.save_total_limit or 1,
+        torch.cuda.is_available(), grad_ckpt, optim, fsdp)
     if fsdp:
-        # shard params+grads+optim states across GPUs; save full state dict
-        # so infer/GGUF/upload paths keep working unchanged
-        fsdp_kwargs = {"fsdp": fsdp,
-                       "fsdp_config": {"fsdp_state_dict_type": "FULL_STATE_DICT",
-                                       "fsdp_transformer_layer_cls_to_wrap": "LlamaDecoderLayer"}}
         print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
-    targs = TrainingArguments(
-        output_dir=args.out, per_device_train_batch_size=bs,
-        gradient_accumulation_steps=accum,
-        num_train_epochs=args.epochs, learning_rate=lr,
-        logging_steps=2, save_steps=50, save_total_limit=1,
-        fp16=torch.cuda.is_available(), report_to="none",
-        gradient_checkpointing=grad_ckpt, optim=optim,
-        **fsdp_kwargs,
-    )
+    targs = TrainingArguments(**kw)
     try:
-        Trainer(model=model, args=targs, train_dataset=ds).train()
+        Trainer(model=model, args=targs, train_dataset=ds).train(
+            resume_from_checkpoint=args.resume_ckpt or None)
     except torch.cuda.OutOfMemoryError:
         import traceback
         traceback.print_exc()

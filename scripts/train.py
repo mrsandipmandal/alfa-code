@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, encode_text, load_bpe_tokenizer
-from train_hf import build_model, resolve_fsdp_optim
+from train_hf import build_model, check_disk_gb, estimate_need_gb, make_training_kwargs, resolve_fsdp_optim
 
 import torch
 import yaml
@@ -130,6 +130,10 @@ def main():
                     help="continue training from this checkpoint dir (self-learn cycles)")
     ap.add_argument("--fsdp", default=os.getenv("ALFA_FSDP", ""),
                     help='FSDP sharding across GPUs, e.g. "full_shard" (Kaggle T4x2). Empty = single-GPU.')
+    ap.add_argument("--save-steps", type=int, default=None)
+    ap.add_argument("--save-total-limit", type=int, default=None)
+    ap.add_argument("--resume-ckpt", default="",
+                    help="Trainer resume_from_checkpoint path: continues optimizer+step after a crash")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
@@ -178,6 +182,9 @@ def main():
     model = build_model(model_cfg, resume_from)
     if cfg["grad_ckpt"]:
         model.gradient_checkpointing_enable()
+    n_params = sum(p.numel() for p in model.parameters())
+    print(f"params: {n_params / 1e9:.2f}B", flush=True)
+    check_disk_gb(cfg["output_dir"], estimate_need_gb(n_params, fp16=torch.cuda.is_available()))
 
     ds = JsonlDS(args.data, tok_len=cfg["max_seq_len"],
                  truncation=cfg["truncation"],
@@ -185,24 +192,16 @@ def main():
                  video_frames=cfg["video_frames"],
                  video_tpp=cfg["video_tokens_per_frame"],
                  tokenizer_path=args.tokenizer)
-    targs = TrainingArguments(
-        output_dir=cfg["output_dir"],
-        per_device_train_batch_size=cfg["batch_size"],
-        gradient_accumulation_steps=cfg["grad_accum"],
-        num_train_epochs=cfg["epochs"],
-        learning_rate=cfg["lr"],
-        logging_steps=5, save_steps=50,
-        fp16=torch.cuda.is_available(),
-        gradient_checkpointing=cfg["grad_ckpt"],
-        optim=cfg["optim"],
-        report_to="none",
-        **({"fsdp": fsdp,
-            "fsdp_config": {"fsdp_state_dict_type": "FULL_STATE_DICT",
-                            "fsdp_transformer_layer_cls_to_wrap": "LlamaDecoderLayer"}}
-           if fsdp else {}),
-    )
+    kw = make_training_kwargs(
+        cfg["output_dir"], cfg["batch_size"], cfg["grad_accum"], cfg["epochs"], cfg["lr"],
+        args.save_steps or 50, args.save_total_limit or 1,
+        torch.cuda.is_available(), cfg["grad_ckpt"], cfg["optim"], fsdp)
+    if fsdp:
+        print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
+    targs = TrainingArguments(**kw)
     try:
-        Trainer(model=model, args=targs, train_dataset=ds).train()
+        Trainer(model=model, args=targs, train_dataset=ds).train(
+            resume_from_checkpoint=args.resume_ckpt or None)
     except torch.cuda.OutOfMemoryError:
         import traceback
         traceback.print_exc()
