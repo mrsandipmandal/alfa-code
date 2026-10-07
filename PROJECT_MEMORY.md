@@ -125,7 +125,11 @@ Corrected English:
   Verified: argparse flags, config load both yamls, OptimizerNames valid, notebooks valid। Colab: restart runtime first (old processes hold VRAM), then scale-up cell rerun।
 - [2026-10-05] MODEL switch ("tiny-50M kano ami to 1B nicchi to?") — default train cell tiny-50M-এ hardcode ছিল।
   Implemented: setup cell (`MODEL = "base-1B"` / `"tiny-50M"`) থেকে CONFIG/OUT/EPOCHS/SEQ_LEN/BS/ROWS/CHAT_ROWS derive; data + train cells `{var}` interpolation;
-  redundant scale-up cell removed; upload/UI cells already model-agnostic। Verified order clone→setup→data→train→upload→ui।
+  redundant scale-up cell removed; upload/UI cells already model-agnostic।   Verified order clone→setup→data→train→upload→ui।
+- [2026-10-05] Self-learning loop 1+2 ("1+2 plan + implement করবো" → Colab manual 1B + both seeds + auto-upload/review → "apply")।
+  Implemented: `data/seeds/topics.txt` + `scripts/self_learn.py` (topics+train seeds, retry gen, 4 gates: meaningful/dedup/lang-aware-parse/bounds, keep-rate abort, 30% cap, newline-safe append) + notebook cycle cell (retrain to self-cycle-N, cp to promote) + upload auto-discover।
+  Verified end-to-end locally: seeds/filter/abort/positive/trim/fresh/cap/schema all OK। Found+fixed real bug: append glued rows when file lacks trailing newline।
+  Review model: auto-upload versioned `outputs/self-cycle-N`, promote to base-1B only on approve (rollback = previous cycle)।
 - [2026-10-05] 1B OOM in SDPA (log: ultrachat wrong split + OOM at 2% + gradio6 css warning) — 3 fixes, all verified।
   Implemented: SOURCES split support (ultrachat→train_sft, all others explicit train); scale-up 1B cell --max-seq-len 1024 (2048 OOMs on T4) + PYTORCH alloc hint;
   ui.py Gradio6 css compat (Blocks vs launch by version) + launch_share() used by notebook cell।
