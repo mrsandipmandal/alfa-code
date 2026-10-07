@@ -129,6 +129,13 @@ def main():
 
     tok = load_bpe_tokenizer(args.tokenizer)
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if not Path(args.ckpt, "config.json").exists():
+        # 'outputs/tiny-50M' as a Hub id 404s confusingly — fail fast instead
+        raise SystemExit(
+            f"no checkpoint at {args.ckpt} (missing config.json). "
+            "Train first, or pass --ckpt to your trained folder "
+            "(e.g. --ckpt /content/outputs/base-1B on Colab, "
+            "--ckpt /kaggle/working/outputs/base-1B on Kaggle).")
     print(f"loading {args.ckpt} ...", flush=True)
     model = LlamaForCausalLM.from_pretrained(
         args.ckpt, torch_dtype=torch.float16 if device == "cuda" else torch.float32)
