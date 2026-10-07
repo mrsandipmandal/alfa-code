@@ -124,6 +124,8 @@ Corrected English:
   Implemented: `--optim adamw_8bit` (halves optimizer VRAM) in both train scripts + `optim: adamw_8bit` in base-1B.yaml; `--grad-accum` override; OOM catch with 4-step fix hints; bitsandbytes in notebook pip cell।
   Verified: argparse flags, config load both yamls, OptimizerNames valid, notebooks valid। Colab: restart runtime first (old processes hold VRAM), then scale-up cell rerun।
 - [2026-10-05] Kaggle production verify — ultrachat split fix কাজ করেছে (train_sft → 2000 rows, tokenizer vocab 32000) ✅। কিন্তু session No Accelerator → torch+cpu, 1B CPU-তে অসম্ভব। Fix: session GPU T4x2 enable করতে হবে।
+- [2026-10-05] T4x2 vs TPU ("konta batter?") — **GPU T4x2**। TPU-তে চলবে না (PyTorch+bitsandbytes+fp16 CUDA-only stack; TPU-তে torch-xla rewrite লাগতো)।
+  Implemented: `cuda_hint()` in bpe.py (Kaggle vs Colab aware), used by both train scripts। Verified both messages।
 - [2026-10-05] MODEL switch ("tiny-50M kano ami to 1B nicchi to?") — default train cell tiny-50M-এ hardcode ছিল।
   Implemented: setup cell (`MODEL = "base-1B"` / `"tiny-50M"`) থেকে CONFIG/OUT/EPOCHS/SEQ_LEN/BS/ROWS/CHAT_ROWS derive; data + train cells `{var}` interpolation;
   redundant scale-up cell removed; upload/UI cells already model-agnostic।   Verified order clone→setup→data→train→upload→ui।
