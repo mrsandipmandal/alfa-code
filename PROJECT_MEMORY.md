@@ -129,6 +129,9 @@ Corrected English:
 - [2026-10-05] Self-learning loop 1+2 ("1+2 plan + implement করবো" → Colab manual 1B + both seeds + auto-upload/review → "apply")।
   Implemented: `data/seeds/topics.txt` + `scripts/self_learn.py` (topics+train seeds, retry gen, 4 gates: meaningful/dedup/lang-aware-parse/bounds, keep-rate abort, 30% cap, newline-safe append) + notebook cycle cell (retrain to self-cycle-N, cp to promote) + upload auto-discover।
   Verified end-to-end locally: seeds/filter/abort/positive/trim/fresh/cap/schema all OK। Found+fixed real bug: append glued rows when file lacks trailing newline।
+- [2026-10-05] Kaggle notebook ("train limit nai... kaggle er jonno notebook banau") — Colab 1B train success (100% 375/375, 4.2GB) + Colab quota শেষ।
+  Implemented: `notebooks/kaggle_t4.ipynb` — kaggle_secrets HF_TOKEN, /kaggle/working paths, MODEL switch, data/train/cycle/upload/infer cells, no colab imports।
+  Verified: no google.colab refs, no /content paths, python syntax OK।
   Review model: auto-upload versioned `outputs/self-cycle-N`, promote to base-1B only on approve (rollback = previous cycle)।
 - [2026-10-05] 1B OOM in SDPA (log: ultrachat wrong split + OOM at 2% + gradio6 css warning) — 3 fixes, all verified।
   Implemented: SOURCES split support (ultrachat→train_sft, all others explicit train); scale-up 1B cell --max-seq-len 1024 (2048 OOMs on T4) + PYTORCH alloc hint;
