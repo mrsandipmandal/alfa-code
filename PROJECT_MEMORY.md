@@ -171,3 +171,7 @@ Corrected English:
 - [2026-10-05] Disk-full crash ("kano holo?") — 15%-এ checkpoint save-এ ENOSPC (FSDP ঠিকই চলছিল, loss falling)। Checkpoint dirs empty → progress lost।
   Implemented: disk preflight (fail fast with cleanup advice) + `--save-steps/--save-total-limit` (notebook: 200/1) + `--resume-ckpt` Trainer resume + kaggle cleanup lines (checkpoints + HF/pip cache + df check)।
   Verified: estimate/check/kwargs unit tests, notebook cells, flags। Rerun: cleanup auto-runs, crash হলে --resume-ckpt দিয়ে continue।
+- [2026-10-05] Disk-full at 61% ("kano holo?") — checkpoint save-এ ENOSPC (FSDP/loss ঠিক ছিল); checkpoint dirs empty → progress lost।
+  Root cause: optimizer states ~9GB/checkpoint + HF cache on small root mount; preflight ভুল mount দেখেছিল (আমার bug)।
+  Implemented: multi-mount preflight (outputs + HF_HOME + TMPDIR) + optimizer-aware estimate (1B ~= 29GB) + kaggle cache redirect (HF/PIP/TMP → working disk) + stronger cleanup + df gate।
+  Verified: estimate/check/kwargs unit tests, notebook cells। train.py shared helpers বলে auto-covered।
