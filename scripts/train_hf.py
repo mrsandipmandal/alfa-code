@@ -132,6 +132,9 @@ def main():
                     help="keep at most N checkpoints (default 1)")
     ap.add_argument("--resume-ckpt", default="",
                     help="Trainer resume_from_checkpoint path: continues optimizer+step after a crash")
+    ap.add_argument("--min-disk-gb", type=float, default=None,
+                    help="override disk preflight need (GB). Use when YOU judge space is fine, "
+                         "e.g. --min-disk-gb 15. Your risk: mid-run ENOSPC kills the run.")
     args = ap.parse_args()
 
     import yaml
@@ -221,7 +224,11 @@ def main():
         model.gradient_checkpointing_enable()
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params / 1e9:.2f}B", flush=True)
-    check_disk_gb(args.out, estimate_need_gb(n_params, fp16=torch.cuda.is_available()))
+    need_gb = args.min_disk_gb if args.min_disk_gb else estimate_need_gb(
+        n_params, fp16=torch.cuda.is_available())
+    if args.min_disk_gb:
+        print(f"disk preflight overridden by user: need ~{need_gb:.1f} GB (your risk)", flush=True)
+    check_disk_gb(args.out, need_gb)
     ds = JsonlDS(args.data, tok_len=seq_len)
     kw = make_training_kwargs(
         args.out, bs, accum, args.epochs, lr,
