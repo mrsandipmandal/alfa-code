@@ -286,8 +286,9 @@ def main():
     if args.resume_ckpt and not full_ckpt:
         print("NOTE: --resume-ckpt with weights-only checkpoints resumes weights "
               "with a FRESH optimizer (no saved states) — equivalent to --resume-from here.", flush=True)
+    trainer = Trainer(model=model, args=targs, train_dataset=ds)
     try:
-        Trainer(model=model, args=targs, train_dataset=ds).train(
+        trainer.train(
             resume_from_checkpoint=args.resume_ckpt or None)
     except torch.cuda.OutOfMemoryError:
         import traceback
@@ -299,7 +300,13 @@ def main():
         print(" 4. Still OOM: train tiny-50M instead of 1B on free T4.", flush=True)
         print(" 5. Fragmentation: PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True", flush=True)
         raise SystemExit(3)
-    model.save_pretrained(args.out)
+    # NOTE: must go through trainer.save_model(), NOT model.save_pretrained().
+    # Under FSDP the model params are sharded with invalid storages on this
+    # process; a direct save crashes in safetensors (data pointer error).
+    # trainer.save_model() gathers FULL_STATE_DICT first (same path Trainer
+    # itself uses for intermediate checkpoints — proven working: crashed runs
+    # reached 100% through all step-N saves and only died on the manual save).
+    trainer.save_model()
     print(f"saved -> {args.out}")
 
 

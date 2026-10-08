@@ -184,3 +184,7 @@ Corrected English:
 - [2026-10-08] "what exact need?" (Disk 2.4/57.6 panel vs 20.9 free) — exact math executed: weights 2.25 + adam 8.98, x2 rotation + margin = 29.1GB.
   Fix: `--save-only-model` default True (checkpoints = weights only, no 9GB optimizer) → need 5.8GB, fits 20.9GB easily; `--no-save-only-model` restores full state; resume-ckpt+weights-only note; train.py mirrored.
   Verified: signature, kwargs both modes, estimates, help. Crash resume path = --resume-from (weights, fresh optim).
+- [2026-10-08] Final-save crash at 100% ("kano holo?" + screenshots) — 657/657 done, loss 0.9458, then RuntimeError (invalid python storage) in safetensors.
+  Root cause: our own `model.save_pretrained()` on FSDP-sharded params (bypasses Trainer's gather). Proof: run survived all step-N Trainer saves to 100%; installed transformers 5.17 `save_model()` uses `accelerator.get_state_dict()` for FULL_STATE_DICT.
+  Implemented: both train scripts keep `trainer` ref + call `trainer.save_model()` (with why-comment); verified via mock-Trainer test (save_model:1, bare save:0) on CPU.
+  Recovery (no retrain): `ls` OUT — if latest checkpoint-N/ has model.safetensors (~2GB+), it IS the trained model (Trainer-saved, FSDP-safe) → upload/infer/GGUF straight from it; else rerun train cell.
