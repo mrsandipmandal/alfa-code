@@ -43,14 +43,16 @@ def build_model(model_cfg, resume_from=""):
     return model
 
 
-def estimate_need_gb(num_params: int, fp16: bool = True) -> float:
-    """Disk for one full checkpoint (weights + fp32 Adam states) + margin.
+def estimate_need_gb(num_params: int, fp16: bool = True, full_ckpt: bool = True) -> float:
+    """Disk for checkpoints + margin.
 
-    Trainer saves optimizer states too: 1.1B fp32 Adam ~= 9GB alone.
-    During rotation 2 checkpoints coexist transiently — hence x2 + margin.
+    full_ckpt=True (default): weights + fp32 Adam states (~9GB alone at 1B),
+    x2 transient rotation + margin.
+    full_ckpt=False (save_only_model): weights only -> ~5x smaller need.
     """
     w = 2 if fp16 else 4
-    return num_params * (w + 8) * 2 * 1.3 / 1e9
+    per_ckpt = (w + 8) if full_ckpt else w
+    return num_params * per_ckpt * 2 * 1.3 / 1e9
 
 
 def _cache_dirs():
@@ -128,14 +130,15 @@ def check_disk_gb(path, need_gb: float):
 
 
 def make_training_kwargs(out, bs, accum, epochs, lr, save_steps, save_total_limit,
-                         fp16, grad_ckpt, optim, fsdp=""):
+                         fp16, grad_ckpt, optim, fsdp="", save_only_model=True):
     """Pure dict builder (no transformers import) — unit-testable."""
     kw = dict(output_dir=out, per_device_train_batch_size=bs,
               gradient_accumulation_steps=accum, num_train_epochs=epochs,
               learning_rate=lr, logging_steps=2,
               save_steps=save_steps, save_total_limit=save_total_limit,
               fp16=fp16, report_to="none",
-              gradient_checkpointing=grad_ckpt, optim=optim)
+              gradient_checkpointing=grad_ckpt, optim=optim,
+              save_only_model=save_only_model)
     if (fsdp or "").strip():
         kw["fsdp"] = fsdp.strip()
         kw["fsdp_config"] = {"fsdp_state_dict_type": "FULL_STATE_DICT",
@@ -170,6 +173,10 @@ def main():
     ap.add_argument("--min-disk-gb", type=float, default=None,
                     help="override disk preflight need (GB). Use when YOU judge space is fine, "
                          "e.g. --min-disk-gb 15. Your risk: mid-run ENOSPC kills the run.")
+    ap.add_argument("--save-only-model", dest="save_only_model",
+                    action=argparse.BooleanOptionalAction, default=True,
+                    help="checkpoints hold weights only (no 9GB optimizer states). "
+                         "--no-save-only-model keeps full resume state. Crash resume then uses --resume-from (weights).")
     args = ap.parse_args()
 
     import yaml
@@ -259,8 +266,11 @@ def main():
         model.gradient_checkpointing_enable()
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params / 1e9:.2f}B", flush=True)
+    full_ckpt = not args.save_only_model
+    if not full_ckpt:
+        print("checkpoints: weights-only (no 9GB optimizer states) — crash resume via --resume-from (weights)", flush=True)
     need_gb = args.min_disk_gb if args.min_disk_gb else estimate_need_gb(
-        n_params, fp16=torch.cuda.is_available())
+        n_params, fp16=torch.cuda.is_available(), full_ckpt=full_ckpt)
     if args.min_disk_gb:
         print(f"disk preflight overridden by user: need ~{need_gb:.1f} GB (your risk)", flush=True)
     check_disk_gb(args.out, need_gb)
@@ -268,10 +278,14 @@ def main():
     kw = make_training_kwargs(
         args.out, bs, accum, args.epochs, lr,
         args.save_steps or 50, args.save_total_limit or 1,
-        torch.cuda.is_available(), grad_ckpt, optim, fsdp)
+        torch.cuda.is_available(), grad_ckpt, optim, fsdp,
+        save_only_model=not full_ckpt)
     if fsdp:
         print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
     targs = TrainingArguments(**kw)
+    if args.resume_ckpt and not full_ckpt:
+        print("NOTE: --resume-ckpt with weights-only checkpoints resumes weights "
+              "with a FRESH optimizer (no saved states) — equivalent to --resume-from here.", flush=True)
     try:
         Trainer(model=model, args=targs, train_dataset=ds).train(
             resume_from_checkpoint=args.resume_ckpt or None)

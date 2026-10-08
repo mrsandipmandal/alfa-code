@@ -136,6 +136,10 @@ def main():
                     help="Trainer resume_from_checkpoint path: continues optimizer+step after a crash")
     ap.add_argument("--min-disk-gb", type=float, default=None,
                     help="override disk preflight need (GB). Your risk if ENOSPC hits mid-run.")
+    ap.add_argument("--save-only-model", dest="save_only_model",
+                    action=argparse.BooleanOptionalAction, default=True,
+                    help="checkpoints hold weights only (no 9GB optimizer states). "
+                         "--no-save-only-model keeps full resume state. Crash resume then uses --resume-from (weights).")
     args = ap.parse_args()
 
     cfg = load_cfg(args.config)
@@ -186,8 +190,11 @@ def main():
         model.gradient_checkpointing_enable()
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params / 1e9:.2f}B", flush=True)
+    full_ckpt = not args.save_only_model
+    if not full_ckpt:
+        print("checkpoints: weights-only (no 9GB optimizer states) — crash resume via --resume-from (weights)", flush=True)
     need_gb = args.min_disk_gb if args.min_disk_gb else estimate_need_gb(
-        n_params, fp16=torch.cuda.is_available())
+        n_params, fp16=torch.cuda.is_available(), full_ckpt=full_ckpt)
     if args.min_disk_gb:
         print(f"disk preflight overridden by user: need ~{need_gb:.1f} GB (your risk)", flush=True)
     check_disk_gb(cfg["output_dir"], need_gb)
@@ -201,7 +208,8 @@ def main():
     kw = make_training_kwargs(
         cfg["output_dir"], cfg["batch_size"], cfg["grad_accum"], cfg["epochs"], cfg["lr"],
         args.save_steps or 50, args.save_total_limit or 1,
-        torch.cuda.is_available(), cfg["grad_ckpt"], cfg["optim"], fsdp)
+        torch.cuda.is_available(), cfg["grad_ckpt"], cfg["optim"], fsdp,
+        save_only_model=not full_ckpt)
     if fsdp:
         print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
     targs = TrainingArguments(**kw)
