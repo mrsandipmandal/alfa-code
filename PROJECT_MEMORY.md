@@ -175,3 +175,5 @@ Corrected English:
   Root cause: optimizer states ~9GB/checkpoint + HF cache on small root mount; preflight ভুল mount দেখেছিল (আমার bug)।
   Implemented: multi-mount preflight (outputs + HF_HOME + TMPDIR) + optimizer-aware estimate (1B ~= 29GB) + kaggle cache redirect (HF/PIP/TMP → working disk) + stronger cleanup + df gate।
   Verified: estimate/check/kwargs unit tests, notebook cells। train.py shared helpers বলে auto-covered।
+- [2026-10-08] Preflight worked but blocked (20.9 < 29.2 GB) — root cause: my own cache redirect filled working disk (websight images + datasets in /kaggle/working/.hf-cache), old cleanup didn't delete it.
+  Implemented: cleanup now `du` + removes working caches too (both train cells). Action for user: just re-run train cell (cleanup+preflight run first, no fresh session needed).
