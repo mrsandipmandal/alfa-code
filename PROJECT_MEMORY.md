@@ -179,3 +179,5 @@ Corrected English:
   Implemented: cleanup now `du` + removes working caches too (both train cells). Action for user: just re-run train cell (cleanup+preflight run first, no fresh session needed).
 - [2026-10-08] Preflight blocked at 20.9<29.2GB though panel showed 2.4/57.6GB — user rightfully angry: 4GB model vs 29GB demand explained (optimizer 9GB x2 rotation + margin).
   Implemented: `--min-disk-gb` override in both train scripts (user judges, user risks). Fresh session likely has clean disk → rerun passes.
+- [2026-10-08] Panel-vs-container disk mystery (2.4/57.6 panel vs 20.9 free preflight) — HF datasets cache (websight images etc.) filled the container overlay, not working dir.
+  Implemented: download_data.py auto-purges HF datasets cache after writing train.jsonl (rows already safe); preflight failure now prints du breakdown of hogs. Verified purge safety + hog report.
