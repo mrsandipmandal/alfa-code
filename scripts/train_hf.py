@@ -62,6 +62,40 @@ def _cache_dirs():
     }
 
 
+def _dir_size(path, depth=0, _seen=None):
+    total = 0
+    try:
+        with os.scandir(path) as it:
+            for e in it:
+                try:
+                    if e.is_symlink():
+                        continue
+                    if e.is_file(follow_symlinks=False):
+                        total += e.stat(follow_symlinks=False).st_size
+                    elif e.is_dir(follow_symlinks=False) and depth < 2:
+                        total += _dir_size(e.path, depth + 1)
+                except OSError:
+                    continue
+    except OSError:
+        pass
+    return total
+
+
+def print_disk_hogs():
+    """On preflight failure: show WHERE the GBs actually are (panel lies)."""
+    import os
+
+    cands = ["/kaggle/working", os.path.expanduser("~/.cache"), "/tmp", "."]
+    rows = []
+    for c in cands:
+        if os.path.exists(c):
+            rows.append((c, _dir_size(c)))
+    rows.sort(key=lambda r: -r[1])
+    print("disk hogs (top-level):", flush=True)
+    for c, s in rows[:8]:
+        print(f"  {s / 1e9:.1f} GB  {c}", flush=True)
+
+
 def check_disk_gb(path, need_gb: float):
     """Fail fast BEFORE training: check out dir AND cache/tmp mounts.
 
@@ -85,6 +119,7 @@ def check_disk_gb(path, need_gb: float):
             worst = (label, free_gb)
     if worst is not None:
         label, free_gb = worst
+        print_disk_hogs()
         raise SystemExit(
             f"NOT ENOUGH DISK at {label} ({free_gb:.1f} < {need_gb:.1f} GB) — free space first:\n"
             "  rm -rf outputs/*/checkpoint-* ~/.cache/huggingface ~/.cache/pip /tmp/*\n"

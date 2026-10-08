@@ -362,6 +362,40 @@ def main():
     avg_ctx = sum(r["context_len"] for r in kept) // max(1, len(kept))
     print(f"Wrote {len(kept)} rows -> {out} "
           f"(with_images={n_img}, with_video={n_vid}, avg_context_chars={avg_ctx})")
+    purge_hf_datasets_cache()
+
+
+def hf_cache_roots():
+    """All locations where `datasets` may have cached downloads."""
+    import os
+
+    roots = set()
+    for var in ("HF_DATASETS_CACHE", "HF_HOME"):
+        v = os.getenv(var)
+        if v:
+            roots.add(v if var == "HF_DATASETS_CACHE" else os.path.join(v, "datasets"))
+    roots.add(os.path.expanduser("~/.cache/huggingface/datasets"))
+    return [r for r in roots if r]
+
+
+def purge_hf_datasets_cache():
+    """Delete downloaded dataset shards: rows already live in train.jsonl.
+
+    Streaming still caches every downloaded chunk (websight images alone
+    are GBs) and that cache is what fills small container disks.
+    Only removes inside HF cache roots — never user data.
+    """
+    import shutil
+
+    total = 0
+    for root in hf_cache_roots():
+        p = Path(root)
+        if not p.exists():
+            continue
+        size = sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
+        shutil.rmtree(p, ignore_errors=True)
+        total += size
+    print(f"purged HF datasets cache, freed ~{total / 1e9:.1f} GB", flush=True)
 
 
 if __name__ == "__main__":
