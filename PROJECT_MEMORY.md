@@ -177,3 +177,5 @@ Corrected English:
   Verified: estimate/check/kwargs unit tests, notebook cells। train.py shared helpers বলে auto-covered।
 - [2026-10-08] Preflight worked but blocked (20.9 < 29.2 GB) — root cause: my own cache redirect filled working disk (websight images + datasets in /kaggle/working/.hf-cache), old cleanup didn't delete it.
   Implemented: cleanup now `du` + removes working caches too (both train cells). Action for user: just re-run train cell (cleanup+preflight run first, no fresh session needed).
+- [2026-10-08] Preflight blocked at 20.9<29.2GB though panel showed 2.4/57.6GB — user rightfully angry: 4GB model vs 29GB demand explained (optimizer 9GB x2 rotation + margin).
+  Implemented: `--min-disk-gb` override in both train scripts (user judges, user risks). Fresh session likely has clean disk → rerun passes.
