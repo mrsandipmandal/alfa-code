@@ -181,3 +181,6 @@ Corrected English:
   Implemented: `--min-disk-gb` override in both train scripts (user judges, user risks). Fresh session likely has clean disk → rerun passes.
 - [2026-10-08] Panel-vs-container disk mystery (2.4/57.6 panel vs 20.9 free preflight) — HF datasets cache (websight images etc.) filled the container overlay, not working dir.
   Implemented: download_data.py auto-purges HF datasets cache after writing train.jsonl (rows already safe); preflight failure now prints du breakdown of hogs. Verified purge safety + hog report.
+- [2026-10-08] "what exact need?" (Disk 2.4/57.6 panel vs 20.9 free) — exact math executed: weights 2.25 + adam 8.98, x2 rotation + margin = 29.1GB.
+  Fix: `--save-only-model` default True (checkpoints = weights only, no 9GB optimizer) → need 5.8GB, fits 20.9GB easily; `--no-save-only-model` restores full state; resume-ckpt+weights-only note; train.py mirrored.
+  Verified: signature, kwargs both modes, estimates, help. Crash resume path = --resume-from (weights, fresh optim).
