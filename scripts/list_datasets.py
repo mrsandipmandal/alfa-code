@@ -6,7 +6,10 @@ DATASETS = {
     "code_small_test": "HuggingFaceH4/CodeAlpaca_20K",
     # reasoning / instruction
     "code_instruct": "bigcode/self-oss-instruct",
-    "reasoning_general": "Open-Orca/OpenOrca",
+    "code_evolve": "ise-uiuc/Magicoder-OSS-Instruct-12K",
+    "code_reason": "codeparrot/apps (-> mbpp)",
+    "code_reason2": "TACO (-> mbpp)",
+    "code_mix": "even sample of the 6 code_* datasets",
     # image -> code (screenshot + html)
     "image_to_code": "HuggingFaceM4/websight",
 }

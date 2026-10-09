@@ -1,0 +1,54 @@
+# Alfa code-100k — 1.5B code+reasoning model, 2xT4 (Kaggle free) primary.
+# ~1.5B params: d=2048, L=28, H=32, KV=8, FFN=5632.
+# TRAIN at seq 8192 (FSDP full_shard on 2xT4, ~11-12GB/GPU with grad ckpt).
+# DEPLOY up to 100,000 ctx: rope_scaling (YaRN) is written into the saved
+# config AFTER training (train_hf.py), so training uses plain RoPE but HF
+# inference + GGUF (llama.cpp -c 100000) extrapolate to 100K+ tokens.
+# If OOM at 8192: lower --max-seq-len 4096 (rows already tokenized per run).
+model:
+  arch: llama
+  hidden_size: 2048
+  num_layers: 28
+  num_heads: 32
+  num_kv_heads: 8
+  intermediate_size: 5632
+  vocab_size: 32000
+  max_seq_len: 8192
+  rope_theta: 1000000.0
+  # saved into config.json at save time only (NOT active during training):
+  # effective ctx = original_max_position_embeddings * factor = 8192 * 16 = 131072
+  rope_scaling:
+    type: yarn
+    factor: 16.0
+    original_max_position_embeddings: 8192
+    beta_fast: 32.0
+    beta_slow: 1.0
+    attention_factor: 1.0
+tokenizer:
+  type: bpe
+  vocab_size: 32000
+  train_files: data/processed/train.jsonl
+multimodal:
+  vision_encoder: null
+  projector_hidden: 2048
+  image_tokens: 0
+  video_frames: 0
+  video_tokens_per_frame: 0
+context:
+  max_seq_len: 8192       # must match model.max_seq_len
+  max_prompt_chars: 24000  # ~6k tokens, fits 8k ctx with answer budget
+  max_answer_chars: 24000
+  truncation: right        # right | left (keep tail for code completion)
+  gradient_checkpointing: true
+training:
+  batch_size: 1
+  grad_accum: 8
+  lr: 2e-4
+  epochs: 2
+  optim: adamw_8bit   # single-GPU: half optimizer VRAM. FSDP auto-falls back
+                      # to adamw_torch (sharded states) via resolve_fsdp_optim.
+  output_dir: outputs/code-100k
+gguf:
+  quant: Q8_0
+  out_file: outputs/code-100k.gguf
+  ctx_size: 100000     # deploy context target (llama.cpp -c 100000)

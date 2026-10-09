@@ -10,17 +10,20 @@ Unified row schema (jsonl):
   - video: str | null (url / path)
   - context_len: estimated chars of prompt+answer (for long-context filtering)
 
-Datasets (all public, Colab T4 friendly; each has fallbacks in SOURCES):
+Datasets (all public, code-focused; each has fallbacks in SOURCES):
   code_small_test : HuggingFaceH4/CodeAlpaca_20K   (prompt/completion)
   code_long       : iamtarun/python_code_instructions_18k_alpaca (18k python rows, high context)
   code_instruct   : bigcode/self-oss-instruct (-> CodeAlpaca fallback)
-  reasoning       : Open-Orca/OpenOrca
+  code_evolve     : ise-uiuc/Magicoder-OSS-Instruct-12K (evol-style harder code)
+  code_reason     : codeparrot/apps  (competitive coding problem+solution -> mbpp fallback)
+  code_reason2    : TACO (competition problems -> mbpp fallback)
+  code_mix        : even sample of the 6 code_* datasets above (model training entrypoint)
   image_to_code   : HuggingFaceM4/websight         (screenshot -> html)
   video_to_code   : AlexZigma/msr-vtt (-> friedrichor/MSR-VTT train_7k fallback)
   chat_qa         : HuggingFaceH4/ultrachat_200k (-> tatsu-lab/alpaca fallback, chat/instruction tuning)
   multimodal_mix  : code_long + image_to_code + video_to_code sampled together
   TIP: append chat rows to the same train.jsonl for instruction tuning:
-    python scripts/download_data.py --dataset multimodal_mix --max-rows 3000 --overwrite
+    python scripts/download_data.py --dataset code_mix --max-rows 40000 --overwrite
     python scripts/download_data.py --dataset chat_qa --max-rows 2000   # appends
 
 High context: default keeps up to ~24k chars prompt + 24k answer
@@ -48,7 +51,14 @@ MAP = {
     "code_long": ("iamtarun/python_code_instructions_18k_alpaca", None, "train"),
     # coding — instruct mix
     "code_instruct": ("bigcode/self-oss-instruct", None, "train"),
-    "reasoning": ("Open-Orca/OpenOrca", None, "train"),
+    # coding — evol-style harder instructions
+    "code_evolve": ("ise-uiuc/Magicoder-OSS-Instruct-12K", None, "train"),
+    # coding reasoning — competitive programming problems + solutions
+    "code_reason": ("codeparrot/apps", None, "train"),
+    # coding reasoning — competition problems (fallback mbpp)
+    "code_reason2": ("TACO", None, "train"),
+    # combo sampler of the 6 code_* datasets (handled specially)
+    "code_mix": (None, None, None),
     # image -> code (screenshot + html)
     "image_to_code": ("HuggingFaceM4/websight", None, "train"),
     # video -> code/caption (clip metadata + captions)
@@ -58,6 +68,10 @@ MAP = {
     # combo sampler (handled specially, not a single HF id)
     "multimodal_mix": (None, None, None),
 }
+
+# The 6 code datasets used by code_mix (training entrypoint for code models).
+CODE_PARTS = ["code_small_test", "code_long", "code_instruct",
+              "code_evolve", "code_reason", "code_reason2"]
 
 # Fallback sources tried in order when the primary MAP entry is
 # gated / renamed / unreachable (e.g. bigcode/the-stack-smol is gated,
@@ -75,8 +89,19 @@ SOURCES = {
         ("bigcode/self-oss-instruct", None, "train"),
         ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
     ],
-    "reasoning": [
-        ("Open-Orca/OpenOrca", None, "train"),
+    "code_evolve": [
+        ("ise-uiuc/Magicoder-OSS-Instruct-12K", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
+    ],
+    "code_reason": [
+        ("codeparrot/apps", None, "train"),
+        ("mbpp", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
+    ],
+    "code_reason2": [
+        ("TACO", None, "train"),
+        ("mbpp", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
     ],
     "image_to_code": [
         ("HuggingFaceM4/websight", None, "train"),
@@ -205,11 +230,42 @@ def _code_text_row(r: dict):
     return s, ""
 
 
+def _problem_row(r: dict, ds_id: str, max_prompt: int, max_answer: int):
+    """Competition/problem-style rows (apps, TACO, mbpp): many field names."""
+    prompt = (r.get("question") or r.get("problem_description")
+              or r.get("text") or r.get("prompt") or r.get("instruction") or "")
+    ans = (r.get("answer") or r.get("reference_solution") or r.get("solution")
+           or r.get("code") or "")
+    if not ans:  # apps/TACO keep solutions as list of candidates
+        sols = r.get("solutions")
+        if isinstance(sols, list) and sols:
+            ans = sols[0] if len(sols) == 1 else "\n\n".join(map(str, sols))
+    if isinstance(ans, list):  # mbpp test lists etc — keep visible, not code
+        ans = "\n".join(map(str, ans))
+    obj = normalize_code_row(str(prompt), str(ans), ds_id, max_prompt, max_answer)
+    obj["modality"] = "code+reasoning"
+    return obj
+
+
 def build_dataset(name: str, max_rows: int, streaming: bool,
                   max_prompt: int, max_answer: int,
                   image_tokens: int, video_frames: int,
                   video_tokens_per_frame: int, seed: int):
     rows_out = []
+
+    if name == "code_mix":
+        # Even sample of the 6 code datasets (training entrypoint for code models).
+        parts = list(CODE_PARTS)
+        per = max(1, max_rows // len(parts))
+        for p in parts:
+            try:
+                rows_out += build_dataset(p, per, True, max_prompt, max_answer,
+                                          image_tokens, video_frames,
+                                          video_tokens_per_frame, seed)
+            except Exception as e:
+                print(f"[warn] {p} failed ({e}), skipping")
+        random.Random(seed).shuffle(rows_out)
+        return rows_out[:max_rows]
 
     if name == "multimodal_mix":
         # Sample code_long + image_to_code + video_to_code evenly.
@@ -226,7 +282,8 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
         return rows_out[:max_rows]
 
     ds_id, subset, _ = MAP[name]
-    auto_stream = streaming or name in ("code_long", "image_to_code", "video_to_code")
+    auto_stream = streaming or name in ("code_long", "code_evolve", "code_reason",
+                                        "code_reason2", "image_to_code", "video_to_code")
     raw, used_id = _load_rows_first(name, max_rows, auto_stream, seed)
     ds_id = used_id  # record the source that actually worked
 
@@ -258,12 +315,14 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
                     rows_out.append(normalize_code_row(
                         f"Complete and explain this file:\n{CODE_OPEN}\n{prompt}\n{CODE_CLOSE}",
                         prompt, ds_id, max_prompt, max_answer))
-            elif name in ("code_instruct", "reasoning"):
+            elif name in ("code_instruct", "code_evolve"):
                 prompt = r.get("instruction") or r.get("prompt") or r.get("question") or ""
                 answer = r.get("output") or r.get("response") or r.get("answer") or ""
                 obj = normalize_code_row(prompt, answer, ds_id, max_prompt, max_answer)
                 obj["modality"] = "code+reasoning"
                 rows_out.append(obj)
+            elif name in ("code_reason", "code_reason2"):
+                rows_out.append(_problem_row(r, ds_id, max_prompt, max_answer))
             elif name == "image_to_code":
                 # websight: {image: PIL/deferred, text/html fields vary}
                 html = (r.get("html") or r.get("code") or r.get("text")

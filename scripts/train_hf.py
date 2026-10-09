@@ -23,6 +23,27 @@ def resolve_fsdp_optim(fsdp, optim):
     return fsdp, optim
 
 
+def _apply_rope_scaling(model, rope_scaling, seq_len: int):
+    """Write YaRN scaling into model.config BEFORE the final save.
+
+    Training itself stays on plain RoPE; only the saved config.json carries
+    the scaling, so HF inference and GGUF conversion extrapolate to
+    effective_ctx = original_max_position_embeddings * factor (>=100000).
+    """
+    if not rope_scaling:
+        return
+    rs = dict(rope_scaling)
+    if "rope_type" not in rs and "type" in rs:
+        rs["rope_type"] = rs["type"]
+    original = int(rs.get("original_max_position_embeddings", seq_len))
+    if original < seq_len:
+        rs["original_max_position_embeddings"] = original = seq_len
+    model.config.rope_scaling = rs
+    eff = int(original * float(rs.get("factor", 1.0)))
+    print(f"rope_scaling saved to config.json: {rs} "
+          f"-> effective context {eff} tokens", flush=True)
+
+
 def build_model(model_cfg, resume_from=""):
     """Fresh random init, or continue from a checkpoint dir (self-learn cycles).
 
@@ -306,6 +327,10 @@ def main():
     # trainer.save_model() gathers FULL_STATE_DICT first (same path Trainer
     # itself uses for intermediate checkpoints — proven working: crashed runs
     # reached 100% through all step-N saves and only died on the manual save).
+    # rope_scaling must be set BEFORE save: config.json is written by
+    # save_model() and it is what activates YaRN at inference time
+    # (training itself stays on plain RoPE — scaling only lives in config).
+    _apply_rope_scaling(model, mdl.get("rope_scaling"), seq_len)
     trainer.save_model()
     print(f"saved -> {args.out}")
 

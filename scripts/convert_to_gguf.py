@@ -51,7 +51,33 @@ def load_hf_weights(ckpt: Path) -> dict:
     raise SystemExit(f"no weights found in {ckpt} (need model.safetensors or pytorch_model.bin)")
 
 
-def main(ckpt: str, quant: str, out: str, tokenizer: str):
+def _write_yarn(writer, factor: float, original: int, rs: dict):
+    """Long-context (YaRN) rope metadata — what llama.cpp reads for -c > trained.
+
+    gguf-py versions differ in which keys they expose, so each writer call
+    is probed: missing keys just mean llama.cpp falls back to its own
+    dynamic rope scaling when the requested -c exceeds trained ctx.
+    """
+    pairs = [
+        ("add_rope_scaling_type", str(rs.get("type", "yarn"))),
+        ("add_rope_scale_factor", float(factor)),
+        ("add_rope_scale_orig_ctx", int(original)),
+        ("add_yarn_attn_factor", float(rs.get("attention_factor", 1.0))),
+        ("add_yarn_beta_fast", float(rs.get("beta_fast", 32.0))),
+        ("add_yarn_beta_slow", float(rs.get("beta_slow", 1.0))),
+    ]
+    written, skipped = [], []
+    for meth, val in pairs:
+        if hasattr(writer, meth):
+            getattr(writer, meth)(val)
+            written.append(meth)
+        else:
+            skipped.append(meth)
+    print(f"yarn metadata: wrote {written or 'none'}"
+          + (f" (gguf-py lacks: {', '.join(skipped)})" if skipped else ""), flush=True)
+
+
+def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None = None):
     import gguf
 
     ckpt_p, out_p = Path(ckpt), Path(out)
@@ -82,7 +108,14 @@ def main(ckpt: str, quant: str, out: str, tokenizer: str):
     f32 = gguf.GGMLQuantizationType.F32
 
     writer = gguf.GGUFWriter(str(out_p), "llama")  # arch preset by constructor
-    writer.add_context_length(cfg.get("max_position_embeddings", 2048))
+    trained_ctx = int(cfg.get("max_position_embeddings", 2048))
+    rs = cfg.get("rope_scaling") or {}
+    # target context: --ctx-size wins, else rope_scaling in config, else trained
+    target_ctx = (ctx_size or
+                  int(float(rs.get("factor", 1.0)) *
+                      int(rs.get("original_max_position_embeddings", trained_ctx))) or
+                  trained_ctx)
+    writer.add_context_length(target_ctx)
     writer.add_embedding_length(hidden)
     writer.add_block_count(layers)
     writer.add_feed_forward_length(ffn)
@@ -90,6 +123,10 @@ def main(ckpt: str, quant: str, out: str, tokenizer: str):
     writer.add_head_count_kv(kv_heads)
     writer.add_rope_dimension_count(head_dim)
     writer.add_rope_freq_base(cfg.get("rope_theta", 10000.0))
+    if target_ctx > trained_ctx:
+        _write_yarn(writer, target_ctx / trained_ctx, trained_ctx, rs)
+        print(f"long context: trained @ {trained_ctx} -> target {target_ctx} "
+              f"(llama.cpp -c {target_ctx})", flush=True)
     writer.add_layer_norm_rms_eps(cfg.get("rms_norm_eps", 1e-6))
 
     # ---- tokenizer: HF byte-level BPE -> gguf gpt2 type ----
@@ -168,5 +205,9 @@ if __name__ == "__main__":
     ap.add_argument("--quant", default="Q8_0", choices=list(QUANT_CHOICES))
     ap.add_argument("--out", default="outputs/tiny-50M.gguf")
     ap.add_argument("--tokenizer", default="tokenizers/alfa-32k.json")
+    ap.add_argument("--ctx-size", type=int, default=None,
+                    help="deploy context written into the GGUF (e.g. 100000). "
+                         "Default: rope_scaling from config.json, else trained ctx. "
+                         "Run with llama.cpp -c <ctx-size> to use it.")
     a = ap.parse_args()
-    main(a.ckpt, a.quant, a.out, a.tokenizer)
+    main(a.ckpt, a.quant, a.out, a.tokenizer, a.ctx_size)

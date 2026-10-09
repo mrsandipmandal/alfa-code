@@ -17,7 +17,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, encode_text, load_bpe_tokenizer
-from train_hf import build_model, check_disk_gb, estimate_need_gb, make_training_kwargs, resolve_fsdp_optim
+from train_hf import (_apply_rope_scaling, build_model, check_disk_gb,
+                       estimate_need_gb, make_training_kwargs, resolve_fsdp_optim)
 
 import torch
 import yaml
@@ -38,6 +39,7 @@ def load_cfg(path: str | None) -> dict:
     return {
         "max_seq_len": int(c.get("max_seq_len", m.get("max_seq_len", 8192))),
         "rope_theta": float(m.get("rope_theta", 500000.0)),
+        "rope_scaling": m.get("rope_scaling") or None,
         "hidden_size": int(m.get("hidden_size", 512)),
         "num_layers": int(m.get("num_layers", 8)),
         "num_heads": int(m.get("num_heads", 8)),
@@ -230,6 +232,10 @@ def main():
     # NOTE: must go through trainer.save_model(), NOT model.save_pretrained().
     # Under FSDP the model params are sharded with invalid storages on this
     # process; a direct save crashes in safetensors (data pointer error).
+    # rope_scaling must be set BEFORE save: config.json is written by
+    # save_model() and it is what activates YaRN at inference time
+    # (training itself stays on plain RoPE — scaling only lives in config).
+    _apply_rope_scaling(model, cfg.get("rope_scaling"), cfg["max_seq_len"])
     trainer.save_model()
     print(f"saved -> {cfg['output_dir']}")
 

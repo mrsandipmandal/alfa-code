@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, decode_ids, encode_text, load_bpe_tokenizer
 
 import torch
-from transformers import LlamaForCausalLM
+from transformers import LlamaConfig, LlamaForCausalLM
 
 
 def resolve_ckpt(args) -> str:
@@ -55,6 +55,12 @@ def main():
     ap.add_argument("--tokenizer", default="tokenizers/alfa-32k.json",
                     help="BPE tokenizer file (missing -> char-level fallback)")
     ap.add_argument("--max-prompt-tokens", type=int, default=1024)
+    ap.add_argument("--context", type=int, default=None,
+                    help="inference context target (e.g. 100000). Uses the "
+                         "rope_scaling saved in config.json; if the requested "
+                         "context exceeds it, YaRN is applied on top of the "
+                         "trained length. Training itself always stays at the "
+                         "trained length (e.g. 8192).")
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -63,8 +69,26 @@ def main():
     ckpt = resolve_ckpt(args)
     print(f"loading {ckpt} ...", flush=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    cfg = LlamaConfig.from_pretrained(ckpt)
+    rs = getattr(cfg, "rope_scaling", None) or {}
+    trained = int(cfg.max_position_embeddings)
+    orig = int(rs.get("original_max_position_embeddings", trained))
+    eff = int(orig * float(rs.get("factor", 1.0)))
+    if args.context and args.context > eff:
+        factor = args.context / orig
+        cfg.rope_scaling = {"type": "yarn", "rope_type": "yarn",
+                            "factor": factor, "beta_fast": 32.0, "beta_slow": 1.0,
+                            "original_max_position_embeddings": orig}
+        eff = args.context
+    if args.context:
+        print(f"context: trained {trained} -> using {eff} tokens "
+              f"(YaRN factor {eff / orig:.1f})", flush=True)
+    else:
+        print(f"context: {eff} (trained {trained}; pass --context 100000 to extend)",
+              flush=True)
     model = LlamaForCausalLM.from_pretrained(
-        ckpt, torch_dtype=torch.float16 if device == "cuda" else torch.float32)
+        ckpt, config=cfg,
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32)
     model.to(device).eval()
     print(f"model on {device}, params: {sum(p.numel() for p in model.parameters()) / 1e6:.1f}M",
           flush=True)
