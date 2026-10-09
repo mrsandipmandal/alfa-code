@@ -200,3 +200,5 @@ Corrected English:
   Verified: py_compile all scripts; param math ~1.33B; unit tests (problem_row, code_mix sampling, SOURCES/MAP consistency, _apply_rope_scaling, mock-trainer save-order with rope present AT save); nbformat.validate both notebooks; --help outputs.
   Security: user's Kaggle token pasted in chat → user must regenerate it; tokens only via Kaggle Secrets/HF token — never repo/notebook.
   NEXT (user): Kaggle T4x2 session → run kaggle_t4.ipynb (train) → Save Version + Hub upload → then v0.0.2 release (GGUF Q8_0+Q4_0, ctx 100000).
+- [2026-10-09] Colab notebook hardened for free T4 15GB (user: "colab er notebook ta o thik koro"):
+  ACCUM per model (code-100k/base-1B=16, tiny=8 → effective batch 16 = Kaggle parity), train+self-learn cells get `--grad-accum`, PYTORCH_CUDA_ALLOC_CONF=expandable_segments, `--save-steps 100 --save-total-limit 1`, OOM/resume hints (SEQ_LEN 2048 fallback + `--resume-from {OUT}`), 100K-demo cell now guards missing Hub model with Bengali message. Fixed IPython bug I introduced (bare shell lines without `!` → would SyntaxError). Verified: nbformat.validate, no bare-shell lines in either notebook.
