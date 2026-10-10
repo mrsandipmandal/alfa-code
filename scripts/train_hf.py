@@ -167,6 +167,34 @@ def make_training_kwargs(out, bs, accum, epochs, lr, save_steps, save_total_limi
     return kw
 
 
+class PadCollator:
+    """Pad to the longest sequence IN THE BATCH and mask the new pads with -100.
+
+    Why not pad to max_seq_len in the dataset (the old behaviour): rows average
+    ~150 tokens while max_seq_len is 8192, so every micro-batch computed a full
+    8192-token forward/backward over pad tokens (~50x waste — 83h ETA instead of
+    ~2h), AND pad ids sat in `labels`, so cross_entropy trained the model to
+    emit pad tokens (it only ignores -100).
+    """
+
+    def __init__(self, pad_id=0):
+        self.pad_id = pad_id
+
+    def __call__(self, feats):
+        import torch
+
+        max_len = max(len(f["input_ids"]) for f in feats)
+        input_ids, attention_mask, labels = [], [], []
+        for f in feats:
+            pad = max_len - len(f["input_ids"])
+            input_ids.append(list(f["input_ids"]) + [self.pad_id] * pad)
+            attention_mask.append(list(f["attention_mask"]) + [0] * pad)
+            labels.append(list(f["labels"]) + [-100] * pad)
+        return {"input_ids": torch.tensor(input_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+                "labels": torch.tensor(labels, dtype=torch.long)}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=os.getenv("ALFA_DATA", "/data/processed/train.jsonl"))
@@ -228,7 +256,11 @@ def main():
             import bitsandbytes  # noqa: F401
         except ImportError:
             raise SystemExit("adamw_8bit needs bitsandbytes: run  pip install bitsandbytes")
-    print(f"optim={optim} (8-bit halves optimizer VRAM; use it for 1B on T4)")
+    if optim == "adafactor":
+        print("optim=adafactor — sublinear optimizer state (~0 B/param vs 8 B/param "
+              "for AdamW): this is what makes 1.5B @ seq 8192 fit a 14.56 GiB T4", flush=True)
+    else:
+        print(f"optim={optim} (8-bit halves optimizer VRAM; use it for 1B on T4)")
 
     print(f"config: seq_len={seq_len} rope={rope_theta} bs={bs} accum={accum} ckpt={grad_ckpt}")
 
@@ -236,6 +268,13 @@ def main():
     use_bpe = bpe_tok is not None
 
     class JsonlDS(Dataset):
+        """Returns UNPADDED, ragged samples: padding is done per batch by PadCollator.
+
+        Padding every row up to max_seq_len (8192) for ~150-token rows wasted ~50x
+        compute attending over pad tokens, and putting pad ids into `labels`
+        trained the model to emit pads (cross_entropy only ignores -100).
+        """
+
         def __init__(self, path, tok_len=8192):
             rows = [json.loads(l) for l in open(path, encoding="utf-8")]
             self.rows, self.tok_len = rows, tok_len
@@ -254,14 +293,18 @@ def main():
             s = (" ".join(pre) + "\n" if pre else "") + (
                 r.get("prompt", "") + "\n" + r.get("think", "") + "\n" + r.get("answer", ""))
             if use_bpe:
-                ids, attn = encode_text(s, bpe_tok, self.tok_len, truncation)
+                ids, attn = encode_text(s, bpe_tok, self.tok_len, truncation, pad=False)
             else:
                 if len(s) > self.budget:
                     s = s[:self.budget] if truncation == "right" else s[-self.budget:]
                 ids, attn = char_encode(s, self.tok_len)
-            return {"input_ids": torch.tensor(ids, dtype=torch.long),
-                    "attention_mask": torch.tensor(attn, dtype=torch.long),
-                    "labels": torch.tensor(ids, dtype=torch.long)}
+                keep = sum(attn)  # char fallback pads to tok_len — drop it
+                ids, attn = ids[:keep], attn[:keep]
+            if not ids:  # empty row would make a 0-length batch
+                ids, attn = [0], [1]
+            return {"input_ids": ids,
+                    "attention_mask": attn,
+                    "labels": [t if a else -100 for t, a in zip(ids, attn)]}
 
     print(f"data: {args.data} exists={Path(args.data).exists()}")
     cuda = torch.cuda.is_available()
@@ -304,10 +347,14 @@ def main():
     if fsdp:
         print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
     targs = TrainingArguments(**kw)
+    print(f"mixed_precision={targs.mixed_precision} (autocast for compute only — "
+          f"FSDP sharded weights/grads/optimizer stay fp32)", flush=True)
     if args.resume_ckpt and not full_ckpt:
         print("NOTE: --resume-ckpt with weights-only checkpoints resumes weights "
               "with a FRESH optimizer (no saved states) — equivalent to --resume-from here.", flush=True)
-    trainer = Trainer(model=model, args=targs, train_dataset=ds)
+    pad_id = bpe_tok.pad_token_id if (use_bpe and bpe_tok.pad_token_id is not None) else 0
+    trainer = Trainer(model=model, args=targs, train_dataset=ds,
+                      data_collator=PadCollator(pad_id))
     try:
         trainer.train(
             resume_from_checkpoint=args.resume_ckpt or None)

@@ -45,8 +45,10 @@ training:
   grad_accum: 8
   lr: 2e-4
   epochs: 2
-  optim: adamw_8bit   # single-GPU: half optimizer VRAM. FSDP auto-falls back
-                      # to adamw_torch (sharded states) via resolve_fsdp_optim.
+  optim: adafactor  # sublinear optimizer state (~0 B/param vs AdamW's 8 B/param).
+                    # AdamW states = 5.2 GiB/GPU under FSDP full_shard and pushed a
+                    # 1.39B @ 8192 run over the T4's 14.56 GiB (OOM at step 3).
+                    # FSDP + adamw_8bit is incompatible -> adamw_torch (too big); use this.
   output_dir: outputs/code-100k
 gguf:
   quant: Q8_0

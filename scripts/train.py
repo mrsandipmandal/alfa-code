@@ -18,7 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, encode_text, load_bpe_tokenizer
 from train_hf import (_apply_rope_scaling, build_model, check_disk_gb,
-                       estimate_need_gb, make_training_kwargs, resolve_fsdp_optim)
+                       estimate_need_gb, make_training_kwargs, resolve_fsdp_optim,
+                       PadCollator)
 
 import torch
 import yaml
@@ -104,15 +105,22 @@ class JsonlDS(Dataset):
     def __getitem__(self, i):
         r = self.rows[i]
         s = build_text(r, self.image_tokens, self.video_frames, self.video_tpp)
+        # UNPADDED on purpose: PadCollator pads to the batch max and masks the
+        # pads with -100 (padding to tok_len here wasted compute and trained
+        # the model on pad tokens — see PadCollator docstring).
         if self.use_bpe:
-            ids, attn = encode_text(s, self.tok, self.tok_len, self.truncation)
+            ids, attn = encode_text(s, self.tok, self.tok_len, self.truncation, pad=False)
         else:
             if len(s) > self.char_budget:
                 s = s[:self.char_budget] if self.truncation == "right" else s[-self.char_budget:]
             ids, attn = char_encode(s, self.tok_len)
-        return {"input_ids": torch.tensor(ids, dtype=torch.long),
-                "attention_mask": torch.tensor(attn, dtype=torch.long),
-                "labels": torch.tensor(ids, dtype=torch.long)}
+            keep = sum(attn)  # char fallback pads to tok_len — drop it
+            ids, attn = ids[:keep], attn[:keep]
+        if not ids:  # empty row would make a 0-length batch
+            ids, attn = [0], [1]
+        return {"input_ids": ids,
+                "attention_mask": attn,
+                "labels": [t if a else -100 for t, a in zip(ids, attn)]}
 
 
 def main():
@@ -215,7 +223,9 @@ def main():
     if fsdp:
         print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
     targs = TrainingArguments(**kw)
-    trainer = Trainer(model=model, args=targs, train_dataset=ds)
+    pad_id = ds.tok.pad_token_id if (ds.use_bpe and ds.tok.pad_token_id is not None) else 0
+    trainer = Trainer(model=model, args=targs, train_dataset=ds,
+                      data_collator=PadCollator(pad_id))
     try:
         trainer.train(
             resume_from_checkpoint=args.resume_ckpt or None)

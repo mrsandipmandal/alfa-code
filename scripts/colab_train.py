@@ -3,7 +3,8 @@
 Run remotely:
   colab exec -s <session> -f scripts/colab_train.py --timeout 43200
 
-Single T4 budget: adamw_8bit (config default) + grad-accum 16 + grad ckpt.
+Single T4 budget: adafactor (config default — sublinear optimizer state)
++ grad-accum 16 + grad ckpt.
 Colab T4 = 16GB (a bit roomier than Kaggle's 15GB view).
 """
 import os
