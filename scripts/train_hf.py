@@ -13,6 +13,59 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 
+def patch_adafactor_dtensor():
+    """Make HF Adafactor's state init survive FSDP2's DTensor params/grads.
+
+    transformers 5.18 Adafactor.step creates factored state as
+    `torch.zeros(shape).to(grad)` — a PLAIN torch.Tensor (AdamW uses
+    `torch.zeros_like`, which propagates DTensor). Under FSDP2 every
+    param/grad is a DTensor, so the first optimizer step dies with:
+      RuntimeError: aten.add_.Tensor got mixed torch.Tensor and DTensor...
+    (Kaggle 2026-10-10: crashed at step 2/2500, both ranks.)
+
+    Fix: pre-create the state via torch.zeros_like(<grad-derived tensor>)
+    so it inherits the grad's exact DTensor spec (row keeps Shard(0), col
+    matches update.mean(dim=-2)); the original step() then skips its own
+    init (state is non-empty) and its `.to(grad)` resume-branch casts are
+    no-ops. On plain tensors the result is bit-identical to the original
+    init (all-zero state, same shape/dtype), so single-GPU runs are
+    unaffected. Idempotent.
+    """
+    import torch
+    from transformers.optimization import Adafactor
+
+    if getattr(Adafactor.step, "_alfa_dtensor_safe", False):
+        return
+    orig_step = Adafactor.step
+
+    def step(self, closure=None):
+        for group in self.param_groups:
+            for p in group["params"]:
+                if p.grad is None or self.state[p]:
+                    continue
+                grad = p.grad
+                if grad.dtype in {torch.float16, torch.bfloat16}:
+                    grad = grad.float()
+                factored, use_first_moment = self._get_options(group, grad.shape)
+                state = self.state[p]
+                state["step"] = 0
+                if use_first_moment:
+                    state["exp_avg"] = torch.zeros_like(grad)
+                if factored:
+                    # zeros_like(mean(...)) copies the grad's DTensor spec,
+                    # exactly mirroring how step() later computes the updates
+                    state["exp_avg_sq_row"] = torch.zeros_like(grad.mean(dim=-1))
+                    state["exp_avg_sq_col"] = torch.zeros_like(grad.mean(dim=-2))
+                else:
+                    state["exp_avg_sq"] = torch.zeros_like(grad)
+                state["RMS"] = 0
+        return orig_step(self, closure)
+
+    step._alfa_dtensor_safe = True
+    Adafactor.step = step
+    print("patched Adafactor.step: DTensor-safe factored state init (FSDP2)", flush=True)
+
+
 def resolve_fsdp_optim(fsdp, optim):
     """FSDP needs sharded-optimizer-compatible setup: 8-bit adam is out."""
     fsdp = (fsdp or "").strip()
@@ -20,6 +73,8 @@ def resolve_fsdp_optim(fsdp, optim):
         print("FSDP + adamw_8bit incompatible -> falling back to adamw_torch "
               "(states are sharded across GPUs instead)", flush=True)
         optim = "adamw_torch"
+    if optim == "adafactor":
+        patch_adafactor_dtensor()
     return fsdp, optim
 
 
