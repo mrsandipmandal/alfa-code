@@ -66,6 +66,53 @@ def patch_adafactor_dtensor():
     print("patched Adafactor.step: DTensor-safe factored state init (FSDP2)", flush=True)
 
 
+BATCH_STATE = {"seq": 0}  # last micro-batch max seq len — read by the OOM handler
+
+
+def install_chunked_loss(model, chunk=2048):
+    """Sequence-chunked CE = default ForCausalLMLoss math, bounded fp32 memory.
+
+    The default loss does `logits.float()` on the FULL [S, vocab] logits plus
+    fp32 log-softmax/grad tensors (~3 GiB fp32 on top of the fp16 logits at
+    seq 8192) — that chain pushed run-4's near-8192 step-44 batch to
+    14.57 GiB on a 14.56 GiB T4 (torch.OutOfMemoryError: Tried to allocate
+    2.29 GiB, 10 MB short).
+
+    Chunking over SEQUENCE positions is exact: cross-entropy is per-position
+    over the vocab dim, so sum(per-chunk sums) / valid-token-count equals the
+    default mean over all positions (verified vs ForCausalLMLoss in a unit
+    test, both reduction paths).
+    """
+    import torch
+    import torch.nn.functional as F
+
+    def chunked_loss(logits, labels, vocab_size, num_items_in_batch=None,
+                     ignore_index=-100, shift_labels=None, **kwargs):
+        if shift_labels is None:
+            labels = F.pad(labels, (0, 1), value=ignore_index)
+            shift_labels = labels[..., 1:].contiguous()
+        shift_labels = shift_labels.view(-1).to(logits.device)
+        flat = logits.view(-1, vocab_size)
+        total = torch.zeros((), dtype=torch.float32, device=logits.device)
+        for i in range(0, flat.shape[0], chunk):
+            total = total + F.cross_entropy(
+                flat[i:i + chunk].float(), shift_labels[i:i + chunk],
+                ignore_index=ignore_index, reduction="sum")
+        if num_items_in_batch is not None:
+            if torch.is_tensor(num_items_in_batch):
+                num_items_in_batch = num_items_in_batch.to(total.device)
+            return total / num_items_in_batch
+        valid = (shift_labels != ignore_index).sum().clamp(min=1)
+        return total / valid
+
+    try:
+        model.loss_function = chunked_loss
+        print(f"chunked CE: fp32 loss in {chunk}-token sequence chunks "
+              "(same math as default, bounded logits memory at 8192)", flush=True)
+    except (AttributeError, TypeError):
+        print("chunked CE skipped: model has no loss_function setter", flush=True)
+
+
 def resolve_fsdp_optim(fsdp, optim):
     """FSDP needs sharded-optimizer-compatible setup: 8-bit adam is out."""
     fsdp = (fsdp or "").strip()
@@ -213,7 +260,12 @@ def make_training_kwargs(out, bs, accum, epochs, lr, save_steps, save_total_limi
               learning_rate=lr, logging_steps=2,
               save_steps=save_steps, save_total_limit=save_total_limit,
               fp16=fp16, report_to="none",
-              gradient_checkpointing=grad_ckpt, optim=optim,
+              gradient_checkpointing=grad_ckpt,
+              # use_reentrant=False is the path torch documents for
+              # FSDP2/DTensor; the legacy reentrant variant is the one that
+              # mis-frees (or fails) under DTensor params.
+              gradient_checkpointing_kwargs={"use_reentrant": False},
+              optim=optim,
               save_only_model=save_only_model)
     if (fsdp or "").strip():
         kw["fsdp"] = fsdp.strip()
@@ -238,7 +290,12 @@ class PadCollator:
     def __call__(self, feats):
         import torch
 
+        global BATCH_STATE
         max_len = max(len(f["input_ids"]) for f in feats)
+        BATCH_STATE["seq"] = max_len
+        if max_len > 4096:
+            print(f"[long-batch] seq={max_len} — activation/logit memory peaks here",
+                  flush=True)
         input_ids, attention_mask, labels = [], [], []
         for f in feats:
             pad = max_len - len(f["input_ids"])
@@ -384,7 +441,12 @@ def main():
     if grad_ckpt:
         model.gradient_checkpointing_enable()
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"params: {n_params / 1e9:.2f}B", flush=True)
+    model.config.use_cache = False  # KV cache during training = wasted VRAM
+    if cuda:
+        # never fall back to materializing SxS attention scores (8192^2 x heads)
+        torch.backends.cuda.enable_math_sdp(False)
+    install_chunked_loss(model)
+    print(f"params: {n_params / 1e9:.2f}B grad_ckpt={getattr(model, 'is_gradient_checkpointing', '?')}", flush=True)
     full_ckpt = not args.save_only_model
     if not full_ckpt:
         print("checkpoints: weights-only (no 9GB optimizer states) — crash resume via --resume-from (weights)", flush=True)
@@ -416,6 +478,15 @@ def main():
     except torch.cuda.OutOfMemoryError:
         import traceback
         traceback.print_exc()
+        print("\nOOM DIAGNOSTICS (next fix starts here):", flush=True)
+        print(f"  last micro-batch seq len : {BATCH_STATE['seq']}", flush=True)
+        print(f"  gradient checkpointing   : {getattr(model, 'is_gradient_checkpointing', '?')}", flush=True)
+        print(f"  peak allocated / reserved: {torch.cuda.max_memory_allocated() / 2**30:.2f} / "
+              f"{torch.cuda.max_memory_reserved() / 2**30:.2f} GiB", flush=True)
+        try:
+            print(torch.cuda.memory_summary(abbreviated=True), flush=True)
+        except Exception:
+            pass
         print("\nCUDA OUT OF MEMORY — fix, cheapest first:", flush=True)
         print(" 1. Restart the Colab runtime (old processes may hold VRAM), then rerun.", flush=True)
         print(" 2. Lower memory: --batch-size 1 --grad-accum 16 --max-seq-len 1024", flush=True)

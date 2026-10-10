@@ -18,7 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, encode_text, load_bpe_tokenizer
 from train_hf import (_apply_rope_scaling, build_model, check_disk_gb,
-                       estimate_need_gb, make_training_kwargs, resolve_fsdp_optim,
+                       estimate_need_gb, install_chunked_loss,
+                       make_training_kwargs, resolve_fsdp_optim,
                        PadCollator)
 
 import torch
@@ -198,6 +199,10 @@ def main():
     model = build_model(model_cfg, resume_from)
     if cfg["grad_ckpt"]:
         model.gradient_checkpointing_enable()
+    model.config.use_cache = False  # KV cache during training = wasted VRAM
+    if torch.cuda.is_available():
+        torch.backends.cuda.enable_math_sdp(False)  # no SxS attention materialization
+    install_chunked_loss(model)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params / 1e9:.2f}B", flush=True)
     full_ckpt = not args.save_only_model
