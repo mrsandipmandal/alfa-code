@@ -19,7 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bpe import char_encode, encode_text, load_bpe_tokenizer
 from train_hf import (_apply_rope_scaling, build_model, check_disk_gb,
                        estimate_need_gb, install_chunked_loss,
-                       make_training_kwargs, resolve_fsdp_optim,
+                       make_training_kwargs, patch_gqa_for_low_arch,
+                       resolve_fsdp_optim, sdpa_preflight,
                        PadCollator)
 
 import torch
@@ -201,7 +202,13 @@ def main():
         model.gradient_checkpointing_enable()
     model.config.use_cache = False  # KV cache during training = wasted VRAM
     if torch.cuda.is_available():
-        torch.backends.cuda.enable_math_sdp(False)  # no SxS attention materialization
+        print(f"sdpa-gqa: {patch_gqa_for_low_arch()}", flush=True)
+        if sdpa_preflight():
+            torch.backends.cuda.enable_math_sdp(False)  # no SxS attention materialization
+            print("sdpa: fused kernels OK — math SDPA disabled (no SxS)", flush=True)
+        else:
+            print("sdpa: fused kernels incomplete — math SDPA STAYS ON "
+                  "(no crash; watch [long-batch] lines for SxS OOM risk)", flush=True)
     install_chunked_loss(model)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"params: {n_params / 1e9:.2f}B", flush=True)

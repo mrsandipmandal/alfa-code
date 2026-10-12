@@ -113,6 +113,80 @@ def install_chunked_loss(model, chunk=2048):
         print("chunked CE skipped: model has no loss_function setter", flush=True)
 
 
+def patch_gqa_for_low_arch():
+    """Disable transformers' enable_gqa SDPA path on pre-Ampere GPUs (sm<8).
+
+    transformers sdpa_attention_forward skips KV-repeat and calls SDPA with
+    enable_gqa=True whenever the batch is uniformly padded (mask becomes
+    None + is_causal). On T4 (sm75) flash/mem-efficient/cudnn all reject
+    enable_gqa, so with math SDPA disabled backend selection dies at step 0
+    with RuntimeError: Invalid backend (Kaggle 2026-10-10 run).
+
+    Patching use_gqa_in_sdpa -> False forces the classic repeat_kv path,
+    which flash serves (pure causal / bool mask). sm80+ is left untouched.
+    Idempotent; no-op without CUDA.
+    """
+    import torch
+    if not torch.cuda.is_available():
+        return "no-cuda (skipped)"
+    cap = torch.cuda.get_device_capability()
+    if cap[0] >= 8:
+        return f"sm{cap[0]}{cap[1]} (gqa kept)"
+    import transformers.integrations.sdpa_attention as sa
+    if getattr(sa.use_gqa_in_sdpa, "_alfa_gqa_off", False):
+        return "already-patched"
+
+    def _no_gqa(*_a, **_k):
+        return False
+    _no_gqa._alfa_gqa_off = True
+    sa.use_gqa_in_sdpa = _no_gqa
+    return f"patched sm{cap[0]}{cap[1]}: enable_gqa off, repeat_kv on (flash-safe)"
+
+
+def sdpa_preflight():
+    """Probe each fused SDPA backend on the two REAL input shapes of training.
+
+    After patch_gqa_for_low_arch, every forward is either (a) pure causal
+    no-mask (uniform batch) or (b) bool 4D mask (padded batch). Run each
+    variant under sdpa_kernel([backend]) so rejections surface per-backend
+    with the reason, then report whether a fused kernel covers both. Caller
+    disables math SDPA only when this returns True (no SxS risk); otherwise
+    math stays on and training proceeds (crash-proof, long-batch OOM risk
+    logged by [long-batch] lines). No-op without CUDA.
+    """
+    import torch
+    import torch.nn.functional as F
+    if not torch.cuda.is_available():
+        return False
+    from torch.nn.attention import SDPBackend, sdpa_kernel
+
+    q = torch.randn(1, 8, 256, 64, device="cuda", dtype=torch.float16)
+    k = torch.randn(1, 8, 256, 64, device="cuda", dtype=torch.float16)
+    v = torch.randn(1, 8, 256, 64, device="cuda", dtype=torch.float16)
+    bool_mask = torch.zeros(256, 256, device="cuda", dtype=torch.bool)
+    variants = {"causal": dict(is_causal=True),
+                "bool-mask": dict(attn_mask=bool_mask)}
+    fused = {"flash": SDPBackend.FLASH_ATTENTION,
+             "efficient": SDPBackend.EFFICIENT_ATTENTION,
+             "cudnn": SDPBackend.CUDNN_ATTENTION}
+    covered = True
+    for vname, kw in variants.items():
+        v_ok = False
+        for bname, be in fused.items():
+            try:
+                with sdpa_kernel(backends=[be]):
+                    F.scaled_dot_product_attention(q, k, v, **kw)
+                print(f"sdpa-preflight {vname}/{bname}: OK", flush=True)
+                v_ok = True
+            except Exception as e:
+                print(f"sdpa-preflight {vname}/{bname}: FAIL "
+                      f"({type(e).__name__}: {e})", flush=True)
+        covered = covered and v_ok
+    del q, k, v, bool_mask
+    torch.cuda.empty_cache()
+    return covered
+
+
 def resolve_fsdp_optim(fsdp, optim):
     """FSDP needs sharded-optimizer-compatible setup: 8-bit adam is out."""
     fsdp = (fsdp or "").strip()
@@ -253,7 +327,8 @@ def check_disk_gb(path, need_gb: float):
 
 
 def make_training_kwargs(out, bs, accum, epochs, lr, save_steps, save_total_limit,
-                         fp16, grad_ckpt, optim, fsdp="", save_only_model=True):
+                         fp16, grad_ckpt, optim, fsdp="", save_only_model=True,
+                         eval_steps=0):
     """Pure dict builder (no transformers import) — unit-testable."""
     kw = dict(output_dir=out, per_device_train_batch_size=bs,
               gradient_accumulation_steps=accum, num_train_epochs=epochs,
@@ -267,6 +342,12 @@ def make_training_kwargs(out, bs, accum, epochs, lr, save_steps, save_total_limi
               gradient_checkpointing_kwargs={"use_reentrant": False},
               optim=optim,
               save_only_model=save_only_model)
+    if eval_steps > 0:
+        # held-out eval loss every eval_steps (accuracy signal in the log);
+        # default caller uses 5*save_steps so cost stays negligible.
+        kw["eval_strategy"] = "steps"
+        kw["eval_steps"] = eval_steps
+        kw["eval_delay"] = eval_steps  # skip the step-0 eval (nothing trained yet)
     if (fsdp or "").strip():
         kw["fsdp"] = fsdp.strip()
         kw["fsdp_config"] = {"fsdp_state_dict_type": "FULL_STATE_DICT",
@@ -338,13 +419,16 @@ def main():
                     action=argparse.BooleanOptionalAction, default=True,
                     help="checkpoints hold weights only (no 9GB optimizer states). "
                          "--no-save-only-model keeps full resume state. Crash resume then uses --resume-from (weights).")
+    ap.add_argument("--eval-rows", type=int, default=256,
+                    help="held-out rows (tail of train.jsonl) for periodic eval loss "
+                         "(accuracy signal). 0 disables. Eval runs every 5*save_steps.")
     args = ap.parse_args()
 
     import yaml
     import torch
     from bpe import char_encode, encode_text, load_bpe_tokenizer
     from transformers import LlamaConfig, LlamaForCausalLM, Trainer, TrainingArguments
-    from torch.utils.data import Dataset
+    from torch.utils.data import Dataset, Subset
 
     cfg, ctx, trn, mm, mdl = {}, {}, {}, {}, {}
     if args.config and Path(args.config).exists():
@@ -443,8 +527,15 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     model.config.use_cache = False  # KV cache during training = wasted VRAM
     if cuda:
-        # never fall back to materializing SxS attention scores (8192^2 x heads)
-        torch.backends.cuda.enable_math_sdp(False)
+        print(f"sdpa-gqa: {patch_gqa_for_low_arch()}", flush=True)
+        if sdpa_preflight():
+            # fused backends cover both real shapes (causal + bool mask) ->
+            # math off: never fall back to materializing SxS scores (8192^2)
+            torch.backends.cuda.enable_math_sdp(False)
+            print("sdpa: fused kernels OK — math SDPA disabled (no SxS)", flush=True)
+        else:
+            print("sdpa: fused kernels incomplete — math SDPA STAYS ON "
+                  "(no crash; watch [long-batch] lines for SxS OOM risk)", flush=True)
     install_chunked_loss(model)
     print(f"params: {n_params / 1e9:.2f}B grad_ckpt={getattr(model, 'is_gradient_checkpointing', '?')}", flush=True)
     full_ckpt = not args.save_only_model
@@ -456,11 +547,23 @@ def main():
         print(f"disk preflight overridden by user: need ~{need_gb:.1f} GB (your risk)", flush=True)
     check_disk_gb(args.out, need_gb)
     ds = JsonlDS(args.data, tok_len=seq_len)
+    # held-out eval split: tail rows (train.jsonl is pre-shuffled at download)
+    # -> eval loss every 5*save_steps = cheap accuracy signal in the log.
+    save_steps = args.save_steps or 50
+    eval_ds = None
+    n_eval = min(args.eval_rows, max(0, len(ds) // 10))
+    if n_eval >= 32:
+        eval_ds = Subset(ds, range(len(ds) - n_eval, len(ds)))
+        ds = Subset(ds, range(0, len(ds) - n_eval))
+        print(f"eval: {n_eval} held-out rows (tail), eval every {5 * save_steps} steps", flush=True)
+    else:
+        print("eval: off (--eval-rows 0 or tiny dataset)", flush=True)
     kw = make_training_kwargs(
         args.out, bs, accum, args.epochs, lr,
-        args.save_steps or 50, args.save_total_limit or 1,
+        save_steps, args.save_total_limit or 1,
         torch.cuda.is_available(), grad_ckpt, optim, fsdp,
-        save_only_model=not full_ckpt)
+        save_only_model=not full_ckpt,
+        eval_steps=(5 * save_steps) if eval_ds is not None else 0)
     if fsdp:
         print(f"FSDP on: {fsdp} (multi-GPU sharding, ~1.5-1.8x faster on 2xT4)", flush=True)
     targs = TrainingArguments(**kw)
@@ -471,7 +574,7 @@ def main():
               "with a FRESH optimizer (no saved states) — equivalent to --resume-from here.", flush=True)
     pad_id = bpe_tok.pad_token_id if (use_bpe and bpe_tok.pad_token_id is not None) else 0
     trainer = Trainer(model=model, args=targs, train_dataset=ds,
-                      data_collator=PadCollator(pad_id))
+                      eval_dataset=eval_ds, data_collator=PadCollator(pad_id))
     try:
         trainer.train(
             resume_from_checkpoint=args.resume_ckpt or None)

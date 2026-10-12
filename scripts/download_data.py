@@ -17,7 +17,7 @@ Datasets (all public, code-focused; each has fallbacks in SOURCES):
   code_evolve     : ise-uiuc/Magicoder-OSS-Instruct-12K (evol-style harder code)
   code_reason     : codeparrot/apps  (competitive coding problem+solution -> mbpp fallback)
   code_reason2    : TACO (competition problems -> mbpp fallback)
-  code_mix        : even sample of the 6 code_* datasets above (model training entrypoint)
+  code_mix        : reasoning-weighted sample of the 6 code_* datasets above (model training entrypoint)
   image_to_code   : HuggingFaceM4/websight         (screenshot -> html)
   video_to_code   : AlexZigma/msr-vtt (-> friedrichor/MSR-VTT train_7k fallback)
   chat_qa         : HuggingFaceH4/ultrachat_200k (-> tatsu-lab/alpaca fallback, chat/instruction tuning)
@@ -72,6 +72,19 @@ MAP = {
 # The 6 code datasets used by code_mix (training entrypoint for code models).
 CODE_PARTS = ["code_small_test", "code_long", "code_instruct",
               "code_evolve", "code_reason", "code_reason2"]
+
+# Reasoning-focused mix (2026-10-12): competitive-problem sources (APPS, TACO)
+# + evol-style get the majority; plain instruct is a minority. Weights are
+# relative (normalized at sample time) — model priority is code REASONING
+# accuracy, not instruct volume.
+CODE_MIX_WEIGHTS = {
+    "code_reason": 25,      # APPS — competitive programming problems + solutions
+    "code_reason2": 20,     # TACO — competition problems
+    "code_evolve": 20,      # Magicoder-OSS evol-style harder instructions
+    "code_instruct": 15,    # self-oss-instruct
+    "code_long": 12.5,      # long-context python instructions
+    "code_small_test": 7.5,  # CodeAlpaca short instruct
+}
 
 # Fallback sources tried in order when the primary MAP entry is
 # gated / renamed / unreachable (e.g. bigcode/the-stack-smol is gated,
@@ -254,16 +267,27 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
     rows_out = []
 
     if name == "code_mix":
-        # Even sample of the 6 code datasets (training entrypoint for code models).
-        parts = list(CODE_PARTS)
-        per = max(1, max_rows // len(parts))
-        for p in parts:
+        # Reasoning-weighted sample of the 6 code datasets (CODE_MIX_WEIGHTS).
+        total_w = sum(CODE_MIX_WEIGHTS.values())
+        for p in CODE_PARTS:
+            per = max(1, int(round(max_rows * CODE_MIX_WEIGHTS.get(p, 1) / total_w)))
             try:
                 rows_out += build_dataset(p, per, True, max_prompt, max_answer,
                                           image_tokens, video_frames,
                                           video_tokens_per_frame, seed)
             except Exception as e:
                 print(f"[warn] {p} failed ({e}), skipping")
+        # dedup exact/near-duplicate rows (same prompt+answer head) across sources
+        seen, uniq = set(), []
+        for r in rows_out:
+            key = (r.get("prompt", "")[:512], r.get("answer", "")[:512])
+            if key in seen:
+                continue
+            seen.add(key)
+            uniq.append(r)
+        if len(uniq) < len(rows_out):
+            print(f"code_mix: dedup {len(rows_out)} -> {len(uniq)} rows", flush=True)
+        rows_out = uniq
         random.Random(seed).shuffle(rows_out)
         return rows_out[:max_rows]
 
