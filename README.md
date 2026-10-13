@@ -15,19 +15,37 @@ datasets:
 metrics:
 - code_eval
 - perplexity
-version: 0.0.1
+version: 0.0.2
 ---
 
 # Alfa Code - Multimodal Coding GGUF
 
-RTX 3050 4GB: use tiny-50M demo. 1B+ needs cloud 8xH100.
+Llama-based code models, trained on Kaggle T4. Ready-to-run GGUF weights below.
+
+## Download (ready weights)
+
+**GitHub release:** https://github.com/mrsandipmandal/alfa-code/releases/tag/v0.0.2
+**HuggingFace:** https://huggingface.co/mrsandip/Alfa-Code/tree/main/gguf
+
+| Model | Q8_0 (best) | Q4_0 (small) | Context |
+|---|---|---|---|
+| tiny-50M (56M) | tiny-50M-q8.gguf (60 MB) | tiny-50M-q4.gguf (32 MB) | 2048 |
+| base-1B (1.1B) | base-1B-q8.gguf (1.19 GB) | base-1B-q4.gguf (632 MB) | 2048 |
+| code-100k (1.39B) | ⏳ Kaggle upload pending | ⏳ | 8192 (YaRN → 131k) |
+
+```bash
+llama-server -m base-1B-q4.gguf -c 2048
+llama-server -m tiny-50M-q8.gguf -c 2048
+```
+
+Tokenizer (32k BPE): `tokenizers/alfa-32k.json` — also in the v0.0.2 release assets.
 
 ## 1. Data
 `python scripts/download_data.py --dataset code_small_test --max-rows 500`
 Output: `data/processed/train.jsonl` {modality,prompt,think,answer}
 
 ## 2. Tokenizer + Train
-`python scripts/train_tokenizer.py` -> `tokenizers/alfa-32k.json` (verified 47KB)
+`python scripts/train_tokenizer.py` -> `tokenizers/alfa-32k.json` (32000 vocab, ~419KB)
 `pip install torch --index-url https://download.pytorch.org/whl/cu121`
 `python scripts/train.py` -> `outputs/tiny-50M`
 
