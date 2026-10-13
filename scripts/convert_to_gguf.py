@@ -54,40 +54,36 @@ def load_hf_weights(ckpt: Path) -> dict:
 def _write_yarn(writer, factor: float, original: int, rs: dict):
     """Long-context (YaRN) rope metadata — what llama.cpp reads for -c > trained.
 
-    gguf-py versions differ in which typed helpers they expose, so prefer
-    the typed enum API when present and otherwise write the raw
-    `llama.rope.scaling.*` keys llama.cpp actually reads (via generic
-    add_string/add_float32/add_uint32). Either way the deploy context works
-    with llama.cpp -c <ctx-size>.
+    gguf-py versions differ in which keys they expose, so each writer call
+    is probed: missing keys just mean llama.cpp falls back to its own
+    dynamic rope scaling when the requested -c exceeds trained ctx.
     """
-    import gguf
-
+    rtype = str(rs.get("type", "yarn")).lower()
+    import gguf  # lazy: keeps --help working without gguf installed
+    if hasattr(gguf, "RopeScalingType"):
+        # gguf-py >= ~0.10: add_rope_scaling_type needs the enum, not str
+        enum_map = {"none": gguf.RopeScalingType.NONE,
+                    "linear": gguf.RopeScalingType.LINEAR,
+                    "yarn": gguf.RopeScalingType.YARN,
+                    "longrope": gguf.RopeScalingType.LONGROPE}
+        rtype = enum_map.get(rtype, gguf.RopeScalingType.YARN)
+    pairs = [
+        ("add_rope_scaling_type", rtype),
+        ("add_rope_scale_factor", float(factor)),
+        ("add_rope_scale_orig_ctx", int(original)),
+        ("add_yarn_attn_factor", float(rs.get("attention_factor", 1.0))),
+        ("add_yarn_beta_fast", float(rs.get("beta_fast", 32.0))),
+        ("add_yarn_beta_slow", float(rs.get("beta_slow", 1.0))),
+    ]
     written, skipped = [], []
-
-    def _call(meth, *args):
+    for meth, val in pairs:
         if hasattr(writer, meth):
-            try:
-                getattr(writer, meth)(*args)
-                written.append(meth)
-            except (AttributeError, TypeError) as e:
-                skipped.append(f"{meth} ({e})")
+            getattr(writer, meth)(val)
+            written.append(meth)
         else:
             skipped.append(meth)
-
-    st = getattr(gguf, "RopeScalingType", None)
-    st_val = getattr(st, str(rs.get("type", "yarn")).upper(), None) if st is not None else None
-    if st_val is not None:
-        _call("add_rope_scaling_type", st_val)
-    else:
-        _call("add_string", "llama.rope.scaling.type", str(rs.get("type", "yarn")))
-    _call("add_float32", "llama.rope.scaling.factor", float(factor))
-    _call("add_uint32", "llama.rope.scaling.original_context_length", int(original))
-    _call("add_float32", "llama.rope.scaling.attention_factor",
-          float(rs.get("attention_factor", 1.0)))
-    _call("add_float32", "llama.rope.scaling.beta_fast", float(rs.get("beta_fast", 32.0)))
-    _call("add_float32", "llama.rope.scaling.beta_slow", float(rs.get("beta_slow", 1.0)))
     print(f"yarn metadata: wrote {written or 'none'}"
-          + (f" (skipped: {', '.join(skipped)})" if skipped else ""), flush=True)
+          + (f" (gguf-py lacks: {', '.join(skipped)})" if skipped else ""), flush=True)
 
 
 def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None = None):
@@ -149,9 +145,19 @@ def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None =
     ordered = sorted(vocab.items(), key=lambda kv: kv[1])
     token_bytes = [bytes(b2u[ch] for ch in text) for text, _ in ordered]
     merges = tok_js["model"].get("merges", [])
+    # alfa-32k.json stores merges as pairs ([["a","b"],...]); GGUF needs
+    # flat "a b" strings — nested arrays make new llama.cpp refuse the file
+    # (tokenizer.ggml.merges has invalid GGUF type).
+    merges = [" ".join(m) if isinstance(m, (list, tuple)) else m for m in merges]
     added = {t["content"]: t["id"] for t in tok_js.get("added_tokens", [])}
     special = set(added)
     bos, eos = tok_js.get("bos_token"), tok_js.get("eos_token")
+    # fall back to added_tokens when top-level bos/eos missing (None)
+    _added = [t["content"] for t in tok_js.get("added_tokens", [])]
+    if not isinstance(bos, str):
+        bos = next((c for c in _added if c.lower() in ("<s>", "<bos>", "[bos]")), None)
+    if not isinstance(eos, str):
+        eos = next((c for c in _added if c.lower() in ("</s>", "<eos>", "[eos]", "<|endoftext|>")), None)
     unk = next((t["content"] for t in tok_js.get("added_tokens", [])
                 if "unk" in t["content"].lower()), "<unk>")
     pad = next((t["content"] for t in tok_js.get("added_tokens", [])
