@@ -29,8 +29,8 @@ Llama-based code models, trained on Kaggle T4. Ready-to-run GGUF weights below.
 
 | Model | Q8_0 (best) | Q4_0 (small) | Context |
 |---|---|---|---|
-| tiny-50M (56M) | tiny-50M-q8.gguf (60 MB) | tiny-50M-q4.gguf (32 MB) | 2048 |
-| base-1B (1.1B) | base-1B-q8.gguf (1.19 GB) | base-1B-q4.gguf (632 MB) | 2048 |
+| tiny-50M (56M) | [tiny-50M-q8.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/tiny-50M-q8.gguf) (60 MB) | [tiny-50M-q4.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/tiny-50M-q4.gguf) (32 MB) | 2048 |
+| base-1B (1.1B) | [base-1B-q8.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/base-1B-q8.gguf) (1.19 GB) | [base-1B-q4.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/base-1B-q4.gguf) (632 MB) | 2048 |
 | code-100k (1.39B) | ⏳ Kaggle upload pending | ⏳ | 8192 (YaRN → 131k) |
 
 ```bash
