@@ -54,27 +54,40 @@ def load_hf_weights(ckpt: Path) -> dict:
 def _write_yarn(writer, factor: float, original: int, rs: dict):
     """Long-context (YaRN) rope metadata — what llama.cpp reads for -c > trained.
 
-    gguf-py versions differ in which keys they expose, so each writer call
-    is probed: missing keys just mean llama.cpp falls back to its own
-    dynamic rope scaling when the requested -c exceeds trained ctx.
+    gguf-py versions differ in which typed helpers they expose, so prefer
+    the typed enum API when present and otherwise write the raw
+    `llama.rope.scaling.*` keys llama.cpp actually reads (via generic
+    add_string/add_float32/add_uint32). Either way the deploy context works
+    with llama.cpp -c <ctx-size>.
     """
-    pairs = [
-        ("add_rope_scaling_type", str(rs.get("type", "yarn"))),
-        ("add_rope_scale_factor", float(factor)),
-        ("add_rope_scale_orig_ctx", int(original)),
-        ("add_yarn_attn_factor", float(rs.get("attention_factor", 1.0))),
-        ("add_yarn_beta_fast", float(rs.get("beta_fast", 32.0))),
-        ("add_yarn_beta_slow", float(rs.get("beta_slow", 1.0))),
-    ]
+    import gguf
+
     written, skipped = [], []
-    for meth, val in pairs:
+
+    def _call(meth, *args):
         if hasattr(writer, meth):
-            getattr(writer, meth)(val)
-            written.append(meth)
+            try:
+                getattr(writer, meth)(*args)
+                written.append(meth)
+            except (AttributeError, TypeError) as e:
+                skipped.append(f"{meth} ({e})")
         else:
             skipped.append(meth)
+
+    st = getattr(gguf, "RopeScalingType", None)
+    st_val = getattr(st, str(rs.get("type", "yarn")).upper(), None) if st is not None else None
+    if st_val is not None:
+        _call("add_rope_scaling_type", st_val)
+    else:
+        _call("add_string", "llama.rope.scaling.type", str(rs.get("type", "yarn")))
+    _call("add_float32", "llama.rope.scaling.factor", float(factor))
+    _call("add_uint32", "llama.rope.scaling.original_context_length", int(original))
+    _call("add_float32", "llama.rope.scaling.attention_factor",
+          float(rs.get("attention_factor", 1.0)))
+    _call("add_float32", "llama.rope.scaling.beta_fast", float(rs.get("beta_fast", 32.0)))
+    _call("add_float32", "llama.rope.scaling.beta_slow", float(rs.get("beta_slow", 1.0)))
     print(f"yarn metadata: wrote {written or 'none'}"
-          + (f" (gguf-py lacks: {', '.join(skipped)})" if skipped else ""), flush=True)
+          + (f" (skipped: {', '.join(skipped)})" if skipped else ""), flush=True)
 
 
 def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None = None):
