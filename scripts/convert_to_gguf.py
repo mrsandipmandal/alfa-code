@@ -100,7 +100,8 @@ DEFAULT_CHAT_TEMPLATE = (
 
 
 def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None = None,
-         chat_template: str | None = DEFAULT_CHAT_TEMPLATE):
+         chat_template: str | None = DEFAULT_CHAT_TEMPLATE,
+         pre_tokenizer: str | None = "gpt-2"):
     import gguf
 
     ckpt_p, out_p = Path(ckpt), Path(out)
@@ -153,11 +154,16 @@ def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None =
     writer.add_layer_norm_rms_eps(cfg.get("rms_norm_eps", 1e-6))
 
     # ---- tokenizer: HF byte-level BPE -> gguf gpt2 type ----
+    # CRITICAL: token bytes must be the UTF-8 encoding of the token text
+    # (this is what llama.cpp's own converter writes). Do NOT map through
+    # bytes_to_unicode to raw bytes: new llama.cpp reads token strings as
+    # C-strings and byte_to_token() looks up UTF-8 (e.g. byte 0x20 must find
+    # the token whose bytes are C4 A0 = "Ġ", not a token holding raw 0x20).
+    # Raw bytes break ALL space handling (0x20 -> wrong token, UNK_BYTE flood).
     tok_js = json.loads(Path(tokenizer).read_text())
-    b2u = bytes_to_unicode()
     vocab = tok_js["model"]["vocab"]
     ordered = sorted(vocab.items(), key=lambda kv: kv[1])
-    token_bytes = [bytes(b2u[ch] for ch in text) for text, _ in ordered]
+    token_bytes = [text.encode("utf-8") for text, _ in ordered]
     merges = tok_js["model"].get("merges", [])
     # alfa-32k.json stores merges as pairs ([["a","b"],...]); GGUF needs
     # flat "a b" strings — nested arrays make new llama.cpp refuse the file
@@ -187,10 +193,14 @@ def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None =
             types.append(gguf.TokenType.NORMAL)
     scores = [0.0] * n_vocab
     writer.add_tokenizer_model("gpt2")
-    # pre-tokenizer: byte-level BPE. Without this new llama.cpp warns
-    # "missing pre-tokenizer type ... GENERATION QUALITY WILL BE DEGRADED".
+    # pre-tokenizer: classic GPT-2 splitting + BPE merges. The exact string
+    # matters: "gpt2" (no hyphen) is REJECTED by new builds (load fails);
+    # "llama-bpe" loads but sets ignore_merges (no merges applied!);
+    # "gpt-2" (hyphen) = classic behavior on old and new builds.
+    # Overridable via --pre.
     if hasattr(writer, "add_tokenizer_pre"):
-        writer.add_tokenizer_pre("gpt2")
+        if pre_tokenizer:
+            writer.add_tokenizer_pre(pre_tokenizer)
     writer.add_token_list(token_bytes)
     writer.add_token_scores(scores)
     writer.add_token_types(types)
@@ -257,6 +267,12 @@ if __name__ == "__main__":
                          "to embed none.")
     ap.add_argument("--no-chat-template", action="store_true",
                     help="embed no chat template (server falls back to its default)")
+    ap.add_argument("--pre", default="gpt-2",
+                    help="tokenizer.ggml.pre value (byte-level BPE splitting). "
+                         "'gpt-2' (hyphen) = classic GPT-2 on old+new builds. "
+                         "'gpt2' fails on new builds; 'llama-bpe' skips merges. "
+                         "Use --pre '' to write none.")
     a = ap.parse_args()
     main(a.ckpt, a.quant, a.out, a.tokenizer, a.ctx_size,
-         None if a.no_chat_template else (a.chat_template or None))
+         None if a.no_chat_template else (a.chat_template or None),
+         a.pre or None)
