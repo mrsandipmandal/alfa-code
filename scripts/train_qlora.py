@@ -151,7 +151,8 @@ def train(cfg, args):
     bnb = BitsAndBytesConfig(load_in_4bit=True,
                              bnb_4bit_quant_type=cfg["quant"].get("quant_type", "nf4"),
                              bnb_4bit_use_double_quant=cfg["quant"].get("double_quant", True),
-                             bnb_4bit_compute_dtype=getattr(torch, cfg["quant"].get("compute_dtype", "fp16")))
+                             bnb_4bit_compute_dtype=_torch_dtype(
+                                 cfg["quant"].get("compute_dtype", "fp16")))
     base = args.model or cfg["model"].get("base", "")
     sub = cfg["model"].get("subfolder") or None
     print(f"loading base {base} subfolder={sub} (4-bit) ...", flush=True)
@@ -236,6 +237,14 @@ def train(cfg, args):
 
 def build_dataset(rows, tok, cfg):
     return build_features(rows, tok, cfg)
+
+
+def _torch_dtype(name):
+    import torch
+    m = {"fp16": torch.float16, "float16": torch.float16,
+         "bf16": torch.bfloat16, "bfloat16": torch.bfloat16,
+         "fp32": torch.float32, "float32": torch.float32}
+    return m.get(str(name).lower(), torch.float16)
 
 
 def main():
