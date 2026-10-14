@@ -1,0 +1,50 @@
+{"messages": [{"role": "user", "content": "Show disk usage in Linux"}, {"role": "assistant", "content": "```\ndf -h\n```\nShows total, used and free space for each mounted filesystem."}]}
+{"messages": [{"role": "user", "content": "Show folder sizes"}, {"role": "assistant", "content": "```\ndu -sh ~/Downloads\n```\n`-s` summarizes, `-h` prints human-readable sizes."}]}
+{"messages": [{"role": "user", "content": "Find files by name"}, {"role": "assistant", "content": "```\nfind ~ -name \"*.log\"\n```\nSearches the home directory tree for matching names."}]}
+{"messages": [{"role": "user", "content": "Search text inside files"}, {"role": "assistant", "content": "```\ngrep -rn \"TODO\" src/\n```\n`-r` recurses directories, `-n` shows line numbers."}]}
+{"messages": [{"role": "user", "content": "List running processes"}, {"role": "assistant", "content": "```\nps aux | grep python\n```\nPipe to grep to filter the process you want."}]}
+{"messages": [{"role": "user", "content": "Kill a process by PID"}, {"role": "assistant", "content": "```\nkill 1234\n```\nReplace 1234 with the PID from `ps`. Use `-9` only when normal kill fails."}]}
+{"messages": [{"role": "user", "content": "Show listening ports"}, {"role": "assistant", "content": "```\nss -tlnp\n```\nLists TCP ports in listening state with owning processes."}]}
+{"messages": [{"role": "user", "content": "Make a script executable"}, {"role": "assistant", "content": "```\nchmod +x run.sh\n```\nAdds the execute bit so `./run.sh` works."}]}
+{"messages": [{"role": "user", "content": "Extract a tar.gz archive"}, {"role": "assistant", "content": "```\ntar -xzf app.tar.gz\n```\nCreate one with `tar -czf app.tar.gz mydir/`."}]}
+{"messages": [{"role": "user", "content": "Show the end of a log file live"}, {"role": "assistant", "content": "```\ntail -f /var/log/syslog\n```\n`-f` follows new lines; Ctrl+C to stop."}]}
+{"messages": [{"role": "user", "content": "Count lines in a file"}, {"role": "assistant", "content": "```\nwc -l data.jsonl\n```\nAlso try `wc -w` for words and `wc -c` for bytes."}]}
+{"messages": [{"role": "user", "content": "Show first lines of a file"}, {"role": "assistant", "content": "```\nhead -20 app.log\n```\nLast lines with `tail -20 app.log`."}]}
+{"messages": [{"role": "user", "content": "Create nested directories"}, {"role": "assistant", "content": "```\nmkdir -p data/raw data/processed\n```\n`-p` creates parents and skips existing dirs."}]}
+{"messages": [{"role": "user", "content": "Copy a directory recursively"}, {"role": "assistant", "content": "```\ncp -r src/ backup/\n```\n`-r` copies the whole tree including subfolders."}]}
+{"messages": [{"role": "user", "content": "Move or rename a file"}, {"role": "assistant", "content": "```\nmv old.txt new.txt\n```\nSame command moves across directories too."}]}
+{"messages": [{"role": "user", "content": "Show file type"}, {"role": "assistant", "content": "```\nfile model.gguf\n```\nInspects magic bytes, e.g. data vs text vs archive."}]}
+{"messages": [{"role": "user", "content": "Check disk health SMART status"}, {"role": "assistant", "content": "```\nsudo smartctl -H /dev/sda\n```\nNeeds smartmontools; PASSED means the disk reports healthy."}]}
+{"messages": [{"role": "user", "content": "Show memory usage"}, {"role": "assistant", "content": "```\nfree -h\n```\nShows RAM + swap totals, used and available."}]}
+{"messages": [{"role": "user", "content": "Show GPU status"}, {"role": "assistant", "content": "```\nnvidia-smi\n```\nLists GPUs, VRAM use and running processes per GPU."}]}
+{"messages": [{"role": "user", "content": "Check Python version and packages"}, {"role": "assistant", "content": "```\npython3 --version\npip list | grep torch\n```"}]}
+{"messages": [{"role": "user", "content": "Create a Python venv"}, {"role": "assistant", "content": "```\npython3 -m venv .venv\nsource .venv/bin/activate\n```\nDeactivate later with the `deactivate` command."}]}
+{"messages": [{"role": "user", "content": "Install a requirements file"}, {"role": "assistant", "content": "```\npip install -r requirements.txt\n```\nFreeze current env with `pip freeze > requirements.txt`."}]}
+{"messages": [{"role": "user", "content": "SSH into a server"}, {"role": "assistant", "content": "```\nssh user@192.168.1.10\n```\nAccept the fingerprint on first connect; keys avoid passwords."}]}
+{"messages": [{"role": "user", "content": "Copy a file over SSH"}, {"role": "assistant", "content": "```\nscp model.gguf user@host:/tmp/\n```\nAdd `-r` for directories."}]}
+{"messages": [{"role": "user", "content": "Show current directory and user"}, {"role": "assistant", "content": "```\npwd\nwhoami\n```\n`pwd` prints the working directory, `whoami` the login name."}]}
+{"messages": [{"role": "user", "content": "Show environment variables"}, {"role": "assistant", "content": "```\nenv | grep -i proxy\n```\nNever print secrets to shared logs."}]}
+{"messages": [{"role": "user", "content": "Create a new git branch"}, {"role": "assistant", "content": "```\ngit checkout -b feat-x\ngit push -u origin feat-x\n```"}]}
+{"messages": [{"role": "user", "content": "Show git status short"}, {"role": "assistant", "content": "```\ngit status --short\n```\n`M` modified, `??` untracked, `A` staged."}]}
+{"messages": [{"role": "user", "content": "Undo last commit but keep changes"}, {"role": "assistant", "content": "```\ngit reset --soft HEAD~1\n```\nFiles stay staged; use `--mixed` to unstage instead."}]}
+{"messages": [{"role": "user", "content": "Show docker containers"}, {"role": "assistant", "content": "```\ndocker ps\n```\nAdd `-a` to include stopped containers."}]}
+{"messages": [{"role": "user", "content": "Follow docker logs"}, {"role": "assistant", "content": "```\ndocker logs -f myapp\n```\n`-f` streams; `--tail 100` shows the last 100 lines first."}]}
+{"messages": [{"role": "user", "content": "Stop all docker containers"}, {"role": "assistant", "content": "```\ndocker stop $(docker ps -q)\n```\n`docker ps -q` lists only running container IDs."}]}
+{"messages": [{"role": "user", "content": "Check a port is open"}, {"role": "assistant", "content": "```\ncurl -s http://127.0.0.1:8080/health\n```\nEmpty reply means nothing listens there."}]}
+{"messages": [{"role": "user", "content": "Download a file with curl"}, {"role": "assistant", "content": "```\ncurl -L -o file.gguf https://example.com/file.gguf\n```\n`-L` follows redirects, `-o` sets the output name."}]}
+{"messages": [{"role": "user", "content": "Show file permissions"}, {"role": "assistant", "content": "```\nls -la\n```\nFirst column like `-rwxr-xr-x` is the permission string."}]}
+{"messages": [{"role": "user", "content": "Change file owner"}, {"role": "assistant", "content": "```\nsudo chown user:group file.txt\n```\nNeeds sudo unless you already own the file."}]}
+{"messages": [{"role": "user", "content": "Find large files"}, {"role": "assistant", "content": "```\nfind / -xdev -type f -size +1G 2>/dev/null\n```\n`-xdev` stays on one filesystem; errors hidden."}]}
+{"messages": [{"role": "user", "content": "Show CPU info"}, {"role": "assistant", "content": "```\nnproc\nlscpu | head -20\n```\n`nproc` prints the thread count for `-j` flags."}]}
+{"messages": [{"role": "user", "content": "Watch a command repeat"}, {"role": "assistant", "content": "```\nwatch -n 2 nvidia-smi\n```\nRe-runs every 2 seconds; Ctrl+C to stop."}]}
+{"messages": [{"role": "user", "content": "Run a command in background with log"}, {"role": "assistant", "content": "```\nnohup python3 train.py > train.log 2>&1 &\n```\nSurvives logout; PID printed; check with `jobs`."}]}
+{"messages": [{"role": "user", "content": "Show background jobs"}, {"role": "assistant", "content": "```\njobs -l\n```\nBring one forward with `fg %1`."}]}
+{"messages": [{"role": "user", "content": "Compress a folder to zip"}, {"role": "assistant", "content": "```\nzip -r backup.zip mydir/\n```\nUnzip with `unzip backup.zip`."}]}
+{"messages": [{"role": "user", "content": "Show differences between files"}, {"role": "assistant", "content": "```\ndiff -u old.txt new.txt | head -40\n```\n`-u` gives unified context format."}]}
+{"messages": [{"role": "user", "content": "Sort and unique lines"}, {"role": "assistant", "content": "```\nsort data.txt | uniq -c | sort -nr | head\n```\nClassic frequency-count pipeline."}]}
+{"messages": [{"role": "user", "content": "Replace text in files"}, {"role": "assistant", "content": "```\nsed -i 's/foo/bar/g' *.txt\n```\n`-i` edits in place; test without `-i` first."}]}
+{"messages": [{"role": "user", "content": "Show open files by process"}, {"role": "assistant", "content": "```\nls -l /proc/1234/fd\n```\nReplace 1234 with the PID; useful for deleted-but-open files."}]}
+{"messages": [{"role": "user", "content": "Check Ubuntu version"}, {"role": "assistant", "content": "```\nlsb_release -a\n```\nOr read `/etc/os-release` directly."}]}
+{"messages": [{"role": "user", "content": "Update package lists"}, {"role": "assistant", "content": "```\nsudo apt update\n```\nUpgrades with `sudo apt upgrade -y` after that."}]}
+{"messages": [{"role": "user", "content": "Show service status with systemd"}, {"role": "assistant", "content": "```\nsystemctl status myapp\n```\nRestart with `sudo systemctl restart myapp`."}]}
+{"messages": [{"role": "user", "content": "Create a symlink"}, {"role": "assistant", "content": "```\nln -s /data/models ~/models\n```\nLists with `ls -la` showing `->` targets."}]}
