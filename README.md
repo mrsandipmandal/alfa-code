@@ -33,6 +33,8 @@ Llama-based code models, trained on Kaggle T4. Ready-to-run GGUF weights below.
 | base-1B (1.1B) | [base-1B-q8.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/base-1B-q8.gguf) (1.19 GB) | [base-1B-q4.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/base-1B-q4.gguf) (632 MB) | 2048 |
 | code-100k (1.39B) | [code-100k-Q8_0.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/code-100k-Q8_0.gguf) (1.5 GB) | [code-100k-Q4_0.gguf](https://huggingface.co/mrsandip/Alfa-Code/resolve/main/gguf/code-100k-Q4_0.gguf) (786 MB) | 8192 (YaRN → 131k) |
 
+> code-100k is an early checkpoint (1 epoch, eval loss ~3.1) — loads and runs, but output quality is rough. More training coming.
+
 ```bash
 llama-server -m code-100k-Q4_0.gguf -c 8192   # 1.39B, best model
 llama-server -m base-1B-q4.gguf -c 2048
