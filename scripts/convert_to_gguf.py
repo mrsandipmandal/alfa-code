@@ -86,7 +86,21 @@ def _write_yarn(writer, factor: float, original: int, rs: dict):
           + (f" (gguf-py lacks: {', '.join(skipped)})" if skipped else ""), flush=True)
 
 
-def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None = None):
+# Default chat template: mirrors the training row packing
+# (prompt + "\n" + think + "\n" + answer, plain continuation).
+DEFAULT_CHAT_TEMPLATE = (
+    "{%- for message in messages -%}"
+    "{%- if message['role'] == 'user' -%}{{ message['content'] }}\n"
+    "{%- elif message['role'] == 'assistant' -%}{{ message['content'] }}</s>\n"
+    "{%- endif -%}"
+    "{%- endfor -%}"
+    "{%- if add_generation_prompt -%}"
+    "{%- endif -%}"
+)
+
+
+def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None = None,
+         chat_template: str | None = DEFAULT_CHAT_TEMPLATE):
     import gguf
 
     ckpt_p, out_p = Path(ckpt), Path(out)
@@ -173,6 +187,10 @@ def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None =
             types.append(gguf.TokenType.NORMAL)
     scores = [0.0] * n_vocab
     writer.add_tokenizer_model("gpt2")
+    # pre-tokenizer: byte-level BPE. Without this new llama.cpp warns
+    # "missing pre-tokenizer type ... GENERATION QUALITY WILL BE DEGRADED".
+    if hasattr(writer, "add_tokenizer_pre"):
+        writer.add_tokenizer_pre("gpt2")
     writer.add_token_list(token_bytes)
     writer.add_token_scores(scores)
     writer.add_token_types(types)
@@ -183,6 +201,11 @@ def main(ckpt: str, quant: str, out: str, tokenizer: str, ctx_size: int | None =
     writer.add_pad_token_id(vocab.get(pad, 0))
     writer.add_add_bos_token(False)  # training rows had no BOS prefix
     writer.add_add_eos_token(False)
+    # chat template matching the training row format (prompt\nthink\nanswer,
+    # plain continuation — NOT ChatML). Without this the server wraps prompts
+    # in <|im_start|>... tokens the model never saw (garbage in/out).
+    if chat_template and hasattr(writer, "add_chat_template"):
+        writer.add_chat_template(chat_template)
 
     # ---- tensors (gguf-py stores arrays as-is: pre-quantize here) ----
     def add(name, arr, q=qtype):
@@ -228,5 +251,12 @@ if __name__ == "__main__":
                     help="deploy context written into the GGUF (e.g. 100000). "
                          "Default: rope_scaling from config.json, else trained ctx. "
                          "Run with llama.cpp -c <ctx-size> to use it.")
+    ap.add_argument("--chat-template", default=DEFAULT_CHAT_TEMPLATE,
+                    help="Jinja chat template embedded in the GGUF. Default mirrors "
+                         "training rows (plain continuation). Use --chat-template '' "
+                         "to embed none.")
+    ap.add_argument("--no-chat-template", action="store_true",
+                    help="embed no chat template (server falls back to its default)")
     a = ap.parse_args()
-    main(a.ckpt, a.quant, a.out, a.tokenizer, a.ctx_size)
+    main(a.ckpt, a.quant, a.out, a.tokenizer, a.ctx_size,
+         None if a.no_chat_template else (a.chat_template or None))
