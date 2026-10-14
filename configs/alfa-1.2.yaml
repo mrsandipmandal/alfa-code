@@ -40,6 +40,8 @@ training:
   max_seq_len: 4096
   batch_size: 2              # QLoRA 1.1B fits T4-16GB easily; raise if free
   grad_accum: 8              # eff. batch 16
+  eval_batch_size: 1         # eval materializes full fp32 logits: bs=1 or OOM
+  eval_accum: 8              # move eval outputs to CPU in chunks
   lr: 2.0e-4
   epochs: 2                  # v1; raise to 3 if valid ppl still falling
   optim: paged_adamw_8bit

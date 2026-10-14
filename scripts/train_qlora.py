@@ -187,6 +187,8 @@ def train(cfg, args):
     targs = TrainingArguments(
         output_dir=out, num_train_epochs=epochs,
         per_device_train_batch_size=int(tr.get("batch_size", 2)),
+        per_device_eval_batch_size=int(tr.get("eval_batch_size", 1)),
+        eval_accumulation_steps=int(tr.get("eval_accum", 8)),
         gradient_accumulation_steps=int(tr.get("grad_accum", 8)),
         learning_rate=float(args.lr or tr.get("lr", 2e-4)),
         optim=tr.get("optim", "paged_adamw_8bit"),
