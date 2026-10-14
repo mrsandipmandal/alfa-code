@@ -152,7 +152,7 @@ def train(cfg, args):
                              bnb_4bit_quant_type=cfg["quant"].get("quant_type", "nf4"),
                              bnb_4bit_use_double_quant=cfg["quant"].get("double_quant", True),
                              bnb_4bit_compute_dtype=getattr(torch, cfg["quant"].get("compute_dtype", "fp16")))
-    base = cfg["model"].get("base", "")
+    base = args.model or cfg["model"].get("base", "")
     sub = cfg["model"].get("subfolder") or None
     print(f"loading base {base} subfolder={sub} (4-bit) ...", flush=True)
     model = LlamaForCausalLM.from_pretrained(base, subfolder=sub,
@@ -247,6 +247,8 @@ def main():
                     help="cap train rows (experiment mode)")
     ap.add_argument("--train", default=None, help="override train jsonl path")
     ap.add_argument("--valid", default=None, help="override valid jsonl path")
+    ap.add_argument("--model", default=None,
+                    help="override base model repo (e.g. public bundle repo)")
     ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument("--lr", type=float, default=None)
     ap.add_argument("--out", default=None)
