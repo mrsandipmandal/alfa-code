@@ -22,6 +22,13 @@ Datasets (all public, code-focused; each has fallbacks in SOURCES):
   video_to_code   : AlexZigma/msr-vtt (-> friedrichor/MSR-VTT train_7k fallback)
   chat_qa         : HuggingFaceH4/ultrachat_200k (-> tatsu-lab/alpaca fallback, chat/instruction tuning)
   multimodal_mix  : code_long + image_to_code + video_to_code sampled together
+  --- mixed-1.2 slices (chat-messages SFT; see scripts/build_mixed.py) ---
+  code_feedback   : m-a-p/Code-Feedback (66k, messages already user/assistant, apache-2.0)
+  python_codes    : flytech/python-codes-25k (alpaca-style instruction/input/output;
+                    LICENSE NOT shown on card — verify before release use)
+  leetcode_train  : newfacade/LeetCodeDataset train split (problem_description/completion,
+                    apache-2.0; has executable `test` asserts for quality gating)
+  leetcode_test   : SAME dataset, test split -> EVAL ONLY (never train; modality=eval lock)
   TIP: append chat rows to the same train.jsonl for instruction tuning:
     python scripts/download_data.py --dataset code_mix --max-rows 40000 --overwrite
     python scripts/download_data.py --dataset chat_qa --max-rows 2000   # appends
@@ -67,6 +74,15 @@ MAP = {
     "chat_qa": ("HuggingFaceH4/ultrachat_200k", None, "train_sft"),
     # combo sampler (handled specially, not a single HF id)
     "multimodal_mix": (None, None, None),
+    # --- mixed-1.2 SFT slices (messages-format native or near) ---
+    # code feedback — already {messages: [{role, content}]} (OpenCodeInterpreter)
+    "code_feedback": ("m-a-p/Code-Feedback", None, "train"),
+    # python instruct — alpaca-style {instruction, input, output}
+    "python_codes": ("flytech/python-codes-25k", None, "train"),
+    # leetcode train — {problem_description/query, completion/response, test asserts}
+    "leetcode_train": ("newfacade/LeetCodeDataset", None, "train"),
+    # leetcode TEST — eval lock (never train; see build_mixed.py guard)
+    "leetcode_test": ("newfacade/LeetCodeDataset", None, "test"),
 }
 
 # The 6 code datasets used by code_mix (training entrypoint for code models).
@@ -126,6 +142,22 @@ SOURCES = {
     "chat_qa": [
         ("HuggingFaceH4/ultrachat_200k", None, "train_sft"),
         ("tatsu-lab/alpaca", None, "train"),
+    ],
+    # mixed-1.2 slices (fallbacks keep pipeline alive if primary is gated/renamed)
+    "code_feedback": [
+        ("m-a-p/Code-Feedback", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
+    ],
+    "python_codes": [
+        ("flytech/python-codes-25k", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
+    ],
+    "leetcode_train": [
+        ("newfacade/LeetCodeDataset", None, "train"),
+        ("HuggingFaceH4/CodeAlpaca_20K", None, "train"),
+    ],
+    "leetcode_test": [
+        ("newfacade/LeetCodeDataset", None, "test"),
     ],
 }
 
@@ -380,6 +412,56 @@ def build_dataset(name: str, max_rows: int, streaming: bool,
                 obj = normalize_code_row(prompt, answer, ds_id, max_prompt, max_answer)
                 obj["modality"] = "chat"
                 obj["think"] = ""
+                rows_out.append(obj)
+            elif name == "code_feedback":
+                # rows already {messages: [{role, content}]} — flatten to first
+                # user turn(s) + first assistant turn (build_mixed.py re-packs
+                # to messages; multi-turn richness kept via joined turns)
+                msgs = r.get("messages")
+                if isinstance(msgs, list) and msgs:
+                    users = [m.get("content", "") for m in msgs
+                             if isinstance(m, dict) and m.get("role") == "user"][:2]
+                    assts = [m.get("content", "") for m in msgs
+                             if isinstance(m, dict) and m.get("role") == "assistant"][:1]
+                    prompt = "\n".join(users)
+                    answer = "\n".join(assts)
+                else:  # CodeAlpaca fallback shape
+                    prompt = r.get("instruction") or r.get("prompt") or ""
+                    if r.get("input"):
+                        prompt += "\n" + r.get("input")
+                    answer = r.get("output") or r.get("response") or ""
+                obj = normalize_code_row(prompt, answer, ds_id, max_prompt, max_answer)
+                obj["modality"] = "code"
+                rows_out.append(obj)
+            elif name == "python_codes":
+                # alpaca-style {instruction, input, output}
+                instr = (r.get("instruction") or "")
+                if r.get("input"):
+                    instr += "\n" + r.get("input")
+                answer = r.get("output") or r.get("response") or r.get("text") or ""
+                obj = normalize_code_row(instr, answer, ds_id, max_prompt, max_answer)
+                obj["modality"] = "code"
+                rows_out.append(obj)
+            elif name == "leetcode_train":
+                # {problem_description/query, completion/response}; `test` asserts
+                # survive in raw for build_mixed.py's executable quality gate
+                prompt = (r.get("problem_description") or r.get("query") or "")
+                answer = (r.get("completion") or r.get("response") or "")
+                obj = normalize_code_row(prompt, answer, ds_id, max_prompt, max_answer)
+                obj["modality"] = "code+reasoning"
+                obj["tests"] = r.get("test") or ""
+                obj["entry_point"] = r.get("entry_point") or ""
+                rows_out.append(obj)
+            elif name == "leetcode_test":
+                # EVAL LOCK: full raw row, never train (build_mixed.py refuses
+                # modality == "eval")
+                prompt = (r.get("problem_description") or r.get("query") or "")
+                answer = (r.get("completion") or r.get("response") or "")
+                obj = normalize_code_row(prompt, answer, ds_id, max_prompt, max_answer)
+                obj["modality"] = "eval"
+                obj["tests"] = r.get("test") or ""
+                obj["entry_point"] = r.get("entry_point") or ""
+                obj["task_id"] = r.get("task_id") or ""
                 rows_out.append(obj)
             elif name == "video_to_code":
                 # MSR-VTT style: {caption, video_id/url/clip}
