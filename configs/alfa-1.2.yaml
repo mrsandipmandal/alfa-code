@@ -1,0 +1,58 @@
+# Alfa 1.2 — base-1B + QLoRA mixed-data SFT (NOT a fresh arch).
+# "1.2" is a VERSION: base-1B weights (HF outputs/base-1B) adapted with LoRA
+# on data/processed/mixed-1.2-*.jsonl, then merged to full weights for GGUF.
+# LoRA-only training on random weights does not work — hence resume-from-base.
+model:
+  base: "mrsandip/Alfa-Code"   # Hub repo
+  subfolder: "outputs/base-1B" # safetensors + config live here
+  arch: llama
+  hidden_size: 2048
+  num_layers: 22
+  num_heads: 32
+  num_kv_heads: 8
+  intermediate_size: 5632
+  vocab_size: 32000
+tokenizer:
+  file: tokenizers/alfa-32k.json   # real 32k (fixed; was truncated 6291)
+  bos: "<s>"
+  eos: "</s>"
+# Pack format MUST match the GGUF chat template (convert_to_gguf.py default):
+#   user + "\n" + assistant + "</s>", no BOS prefix.
+pack:
+  sep: "\n"
+  eos: "</s>"
+  add_bos: false
+lora:
+  r: 64
+  alpha: 16
+  dropout: 0.05
+  targets: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  modules_to_save: [lm_head, embed_tokens]  # full-precision head+embed
+quant:
+  bits: 4
+  quant_type: nf4
+  double_quant: true
+  compute_dtype: fp16        # T4 = Turing, no bf16 — keep fp16
+data:
+  train: data/processed/mixed-1.2-train.jsonl
+  valid: data/processed/mixed-1.2-valid.jsonl
+training:
+  max_seq_len: 4096
+  batch_size: 2              # QLoRA 1.1B fits T4-16GB easily; raise if free
+  grad_accum: 8              # eff. batch 16
+  lr: 2.0e-4
+  epochs: 2                  # v1; raise to 3 if valid ppl still falling
+  optim: paged_adamw_8bit
+  grad_ckpt: true
+  fp16: true
+  seed: 42
+  eval_steps: 100
+  save_steps: 200
+  save_total_limit: 2        # Kaggle 20GB disk — keep small
+  output_dir: /kaggle/working/outputs/alfa-1.2
+hub:
+  repo: "mrsandip/Alfa-Code"
+  path_in_repo: "outputs/alfa-1.2"   # adapters + merged + eval log
+gguf:
+  quant: Q4_0
+  ctx_size: 2048             # base-1B trained ctx (no YaRN on this line)
