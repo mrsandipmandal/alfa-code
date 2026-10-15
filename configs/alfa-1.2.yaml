@@ -43,7 +43,7 @@ training:
   eval_batch_size: 1         # eval materializes full fp32 logits: bs=1 or OOM
   eval_accum: 8              # move eval outputs to CPU in chunks
   lr: 2.0e-4
-  epochs: 2                  # v1; raise to 3 if valid ppl still falling
+  epochs: 4                  # cycle-2: loss still falling at epoch 2
   optim: paged_adamw_8bit
   grad_ckpt: true
   fp16: true

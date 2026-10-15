@@ -78,6 +78,8 @@ def main():
     ap.add_argument("--test-file", required=True)
     ap.add_argument("--n-tasks", type=int, default=20)
     ap.add_argument("--n-predict", type=int, default=256)
+    ap.add_argument("--repeat-penalty", type=float, default=1.1,
+                    help="default sampler setting (weak models collapse without it)")
     ap.add_argument("--min-pass", type=float, default=0.10)
     ap.add_argument("--out", default="reports/eval.json")
     ap.add_argument("--eval-log", default=None,
@@ -95,7 +97,8 @@ def main():
         try:
             gen = api_post(args.endpoint, "/completion",
                            {"prompt": r["prompt"], "n_predict": args.n_predict,
-                            "temperature": 0})["content"]
+                            "temperature": 0,
+                            "repeat_penalty": args.repeat_penalty})["content"]
             ok, reason = run_check(extract_code(gen), r.get("tests", ""),
                                    r.get("entry_point", ""))
         except Exception as e:
@@ -116,7 +119,8 @@ def main():
             try:
                 a = api_post(args.endpoint, "/completion",
                              {"prompt": q, "n_predict": 120,
-                              "temperature": 0})["content"]
+                              "temperature": 0,
+                              "repeat_penalty": args.repeat_penalty})["content"]
             except Exception as e:
                 a = f"HARNESS-ERROR: {e}"
             bn_pending.append({"q": q[:200], "a": a[:500]})
